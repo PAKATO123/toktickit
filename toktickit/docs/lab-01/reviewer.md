@@ -1,7 +1,7 @@
 # Lab 1 — Peer Review Record  (fill this in)
 
-**Author:** <your name> — <student id> — GitHub: @<username>
-**Peer reviewer:** <partner name> — <student id> — GitHub: @<username>
+**Author:** Pattarapon Sribuathong — 67070503434 — GitHub: @PAKATO123
+**Peer reviewer:** Chakriwat Srivilai — 67070503407 — GitHub: @GusGusxz
 
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
@@ -11,9 +11,16 @@
 |    | feature/3-category-seed |  |
 |    | feature/4-category-list |  |
 
-Reviewer comment I received: <...>
-How I responded: <...>
+**Branch 1 - feature/1-project-foundation**
+**PR-1-1**
+| Verdict | Rejected |
+Reviewer comment I received: "README is missing here, please add it before this can be approved"
+How I responded: "I added the README among other missing things to the branch"
+**PR-1-2**
+| Verdict |  |
+Reviewer comment I received: "<...>"
+How I responded: "<...>"
 
 ## Pull Requests I reviewed for my partner
-My comment: <...>
-Partner's response: <...>
+My comment: "<...>"
+Partner's response: "<...>"
