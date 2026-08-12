@@ -6,7 +6,7 @@
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-|    | feature/1-project-foundation |  |
+|    | feature/1-project-foundation | Approved |
 |    | feature/2-health-check |  |
 |    | feature/3-category-seed |  |
 |    | feature/4-category-list |  |
@@ -17,9 +17,10 @@
 Reviewer comment I received: "README is missing here, please add it before this can be approved"
 How I responded: "I added the README among other missing things to the branch"
 **PR-1-2**
-| Verdict |  |
-Reviewer comment I received: "<...>"
-How I responded: "<...>"
+| Verdict | Approved |
+Reviewer comment I received: "everything looks good now, approved"
+How I responded: -
+
 
 ## Pull Requests I reviewed for my partner
 My comment: "<...>"
