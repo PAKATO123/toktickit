@@ -10,10 +10,15 @@ export default function App() {
   void categories;
 
   async function handleCheck() {
-    // TODO(Issue 4): set loading, call checkSystem(), then either
-    //   - success: store categories and show Online + the list, or
-    //   - error: show Offline + a useful message.
     setState("loading");
+    try {
+      const status = await checkSystem();
+      setCategories(status.categories);
+      setState("success");
+    } catch (error) {
+      console.error(error);
+      setState("error");
+    }
   }
 
   return (
@@ -26,7 +31,16 @@ export default function App() {
         {state === "loading" ? "Loading…" : "Check System"}
       </button>
 
-      {/* TODO(Issue 4): render loading / success (Online + categories) / error (Offline) states. */}
+      {state === "success" && (
+        <div className="mt-4 alert alert-success">
+          <strong>Online:</strong> The backend is available.
+        </div>
+      )}
+      {state === "error" && (
+        <div className="mt-4 alert alert-danger">
+          <strong>Offline:</strong> The backend is unavailable. Please try again later.
+        </div>
+      )}
     </div>
   );
 }
