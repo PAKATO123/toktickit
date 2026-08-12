@@ -33,12 +33,12 @@ export default function App() {
 
       {state === "success" && (
         <div className="mt-4 alert alert-success">
-          <strong>Online:</strong> The backend is available.
+          System Status: Online.
         </div>
       )}
       {state === "error" && (
         <div className="mt-4 alert alert-danger">
-          <strong>Offline:</strong> The backend is unavailable. Please try again later.
+          System Status: Offline
         </div>
       )}
     </div>
