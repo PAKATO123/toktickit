@@ -1,6 +1,6 @@
 # Lab 1 — AI Use and Reflection  (fill this in)
 
-**LLM/agent used:** <name>
+**LLM/agent used:** <Gemini 3.7 Flash + Claude Sonnet 4.6 via ANtigravity IDE>
 
 ## Selected key prompts (6–10)
 | # | Prompt (summarised) | What I did with the result |
