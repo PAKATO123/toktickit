@@ -19,4 +19,4 @@ Two or three sentences: what made your prompts better, and one place you had to
 correct or reject what the agent produced.
  Giving more context of what i really wanted:
  for example in client App.tsx
- the display on online/offline had different messages than one specified in lab sheet, so i corrected it to match the lab sheet
+ the display on online/offline had different messages than one specified in lab sheet, so i corrected it to match the lab sheet.
