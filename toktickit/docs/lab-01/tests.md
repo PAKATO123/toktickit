@@ -26,5 +26,5 @@ Paste your passing terminal output / screenshot below.
 ![alt text](image-2.png)
 ![alt text](image-3.png)
 
-![alt text](<Screenshot 2026-08-16 232757.png>)
-![alt text](<Screenshot 2026-08-16 232825.png>)
+![alt text](image-4.png)
+![alt text](image-5.png)
