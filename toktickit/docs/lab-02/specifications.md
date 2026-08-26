@@ -310,30 +310,56 @@ Requester Ticketing MVP with UI Foundation
 
 ## 6. UI Specification Summary
 
-The UI foundation adheres to the **Zen Green** design system (`#006B3C` primary, `#0B7A46` secondary, `#EAF6EF` pale accent, `#F5F7F6` page background) with enterprise-grade typography, spacing, and accessible interaction patterns.
+The UI foundation strictly adheres to the **Zen Green** visual design system with enterprise-grade typography, spacing, and accessible interaction patterns.
 
-### Key Screen Workflows & Interactions
-1. **Application Shell & Requester Context**:
-   - Top navigation bar displays the active Development Requester selector.
-   - **Cold Start**: If no requester is selected on load, an empty-state card prompts the user to select an active Development Requester.
+### 6.1 Design Tokens & Element Required Styles
+
+| Token / Element | Required Style / Value | Usage & Application |
+|---|---|---|
+| **Primary green** | `#006B3C` | App header, primary actions, and strong emphasis |
+| **Secondary green** | `#0B7A46` | Active tabs, focus accents, links, and hover states |
+| **Pale green** | `#EAF6EF` | Selected, success, and subtle section emphasis |
+| **Page background** | `#F5F7F6` | Main application background (quiet near-white) |
+| **Surface / cards** | White (`#FFFFFF`) | Cards and panels with subtle border (`#E2E8F0`) and restrained shadow |
+| **Text** | Dark charcoal-green (`#1A2E22`) | Primary body and headings, not pure black, for comfortable reading |
+| **Editable field** | White background (`#FFFFFF`) | Clear neutral border (`#CBD5E0`), standard interactive inputs |
+| **Read-only field** | Soft gray-green (`#F0F4F1`) | Shading that is clearly distinct from editable fields but still readable |
+| **Error** | Dark red (`#C53030`) | Dark red text and border; message appears immediately below the field |
+| **Warning** | Amber (`#D69E2E`) | Amber callout or badge; not used as ordinary decoration |
+| **Success** | Green confirmation (`#006B3C` / `#EAF6EF`) | Readable text with checkmark/icon; no reliance on color alone |
+| **Urgent Red (Bg/Border)** | `#FFF5F5` / `#FEB2B2` | Urgent priority badge background and border |
+
+---
+
+### 6.2 Key Screen Workflows & Interactions
+
+1. **Development Requester Selection Screen (`/` or Selection Modal)**:
+   - **Title & Purpose**: "TokTickIT" title with prominent explanatory text:
+     > *"Select a Development Requester to test requester-specific ticket behavior. This is not a login screen. Authentication and role-based access will be introduced in Lab 3."*
+   - **Dropdown & Actions**: Dropdown listing active Development Requesters loaded from PostgreSQL (`GET /api/requesters`) and a primary "Continue" button (`#006B3C`).
+   - **Screen States**: Handles loading spinner/skeleton, empty state (if no active requesters exist, preventing continuation), and safe API-failure state.
+   - **Post-Selection**: Application shell displays the selected Requester's name with a "Change Requester" action; switching context reloads all requester-specific data.
    - **Context Switch Protection**: If the requester is changed while an unsaved ticket creation form is dirty, a confirmation modal prompts the user before discarding the draft and switching context.
 2. **Ticket Creation (`/tickets/new`)**:
    - Capture required fields (Category, Related System, Summary, Description min 20 chars) and optional Requested Priority.
-   - Form validation highlights the description field border in red with inline error text when below 20 characters upon submission.
+   - Form validation highlights the description field border in red (`#C53030`) with inline error text immediately below when below 20 characters upon submission.
    - Attachments (up to 5 files, 5 MB max per file, JPG/PNG/WEBP/PDF) are staged in client memory with a live counter (`X / 5 files`) and submitted atomically.
+   - Removing a staged file during creation is instant without confirmation.
    - "Submit Ticket" button enters a 15-second disabled cooldown state to prevent duplicate submissions (`BR-18`).
    - On successful creation, the app immediately redirects to the Ticket Detail view with a Zen Green success toast showing the new Ticket Number.
 3. **My Tickets (`/tickets`)**:
    - Keyword search across Ticket Number, Summary, and Description.
    - Filter dropdowns (single value per category) for Category, Related System, Status, and Priority. Applying a search or filter resets pagination to Page 1.
    - **Table Header Sorting**: Clickable headers for *Priority* and *Status* cycle through `Not Applied` → `Sorted` → `Reverse Sorted` → `Not Applied`. Active sort headers are darkened with an indicator. Clicking a different header immediately resets the previous sort.
+   - Priority Sort: Ascending (`Urgent` → `High` → `Medium` → `Low` → `None`) / Descending (Reverse).
+   - Status Sort: Ascending (`New` → `In Progress` → `Resolved` → `Closed`) / Descending (Reverse).
    - Multi-tier sorting cascade: Priority (`Priority` → `Status` → `Ticket Number`); Status (`Status` → `Priority` → `Ticket Number`).
    - Server-side pagination with page size options (10, 25, 50).
    - Distinct states: Loading skeleton/spinner, Empty list state, and No-results filter state with "Clear Filters" button.
 4. **Requester Ticket Detail (`/tickets/:id`)**:
-   - Read-only display of ticket attributes, status badge (`New` pale green), and priority badge.
+   - Read-only display of ticket attributes with soft gray-green background shading, status badge (`New` pale green), and priority badge.
    - Active attachments list with file metadata and download buttons.
-   - Soft-delete attachment action with a confirmation dialog before removal.
+   - Soft-delete attachment action with a confirmation modal before removal.
    - Enforces 403 Forbidden error view when attempting to view another requester's ticket.
 
 ---

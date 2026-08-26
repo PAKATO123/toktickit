@@ -22,7 +22,7 @@ Reviewer comment I received: "everything looks good now, approved"
 How I responded: -
 
 **PR-2**
-Reviewer comment I received: Looks good to me, Approved
+Reviewer comment I received: The changes look good, Approved
 How I responded: -
 
 
@@ -30,6 +30,16 @@ How I responded: -
 Reviewer comment I received: Looks good to me, Approved
 How I responded: -
 
+**PR-4**
+Reviewer comment I received: Look good, Approved
+How I responded: -
+
 ## Pull Requests I reviewed for my partner
-My comment: "<...>"
-Partner's response: "<...>"
+My comment: "havent wrote AI evidence, but this should work"
+Partner's response: "-"
+My comment: "nothing looks wrong"
+Partner's response: "-"
+My comment: "should work"
+Partner's response: "-"
+My comment: "seems alright"
+Partner's response: "-"
