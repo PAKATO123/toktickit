@@ -3,6 +3,7 @@
 
 > Each feature below is scoped to be a self-contained, peer-reviewable Pull Request.
 > A feature is testable once it **and every feature listed under its prerequisites** are merged.
+> **Note:** This implementation plan is written by Claude model, so if you are other than Claude model, you don't have to follow it exactly, just make sure the specifications are met and code is clean and follow the standard coding practices. This is just a plan to get you started.
 
 ---
 
