@@ -1,6 +1,6 @@
 import { Requester } from "./types/requester";
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export interface Category {
   id: number;
@@ -14,7 +14,7 @@ export interface RelatedSystem {
 }
 
 export async function getRequesters(): Promise<Requester[]> {
-  const res = await fetch(`${API_URL}/api/requesters`);
+  const res = await fetch(`${API_BASE_URL}/api/requesters`);
   if (!res.ok) {
     throw new Error("Unable to load Development Requesters.");
   }
@@ -23,7 +23,7 @@ export async function getRequesters(): Promise<Requester[]> {
 }
 
 export async function getRelatedSystems(): Promise<RelatedSystem[]> {
-  const res = await fetch(`${API_URL}/api/related-systems`);
+  const res = await fetch(`${API_BASE_URL}/api/related-systems`);
   if (!res.ok) {
     throw new Error("Unable to load Related Systems.");
   }
@@ -32,7 +32,7 @@ export async function getRelatedSystems(): Promise<RelatedSystem[]> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const res = await fetch(`${API_URL}/api/categories`);
+  const res = await fetch(`${API_BASE_URL}/api/categories`);
   if (!res.ok) {
     throw new Error("Unable to load Categories.");
   }

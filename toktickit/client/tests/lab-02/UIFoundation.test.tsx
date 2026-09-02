@@ -62,7 +62,7 @@ describe("Lab 02 Feature 3 — UI Foundation & Application Shell", () => {
     expect(screen.getByPlaceholderText(/Search tickets/i)).toBeInTheDocument();
   });
 
-  it("renders Create Ticket page at route /tickets/new", () => {
+  it("renders Create Ticket page at route /tickets/new", async () => {
     render(
       <RequesterProvider>
         <MemoryRouter initialEntries={["/tickets/new"]}>
@@ -76,7 +76,7 @@ describe("Lab 02 Feature 3 — UI Foundation & Application Shell", () => {
     );
 
     expect(screen.getByRole("heading", { name: /Create New Ticket/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Submit Ticket/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /Submit Ticket/i })).toBeInTheDocument();
   });
 
   it("renders Ticket Detail page at route /tickets/:id", () => {
