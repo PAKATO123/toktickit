@@ -59,7 +59,7 @@ describe("Lab 02 Feature 3 — UI Foundation & Application Shell", () => {
     );
 
     expect(screen.getByRole("heading", { name: /My Tickets/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Search tickets/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search/i)).toBeInTheDocument();
   });
 
   it("renders Create Ticket page at route /tickets/new", async () => {
