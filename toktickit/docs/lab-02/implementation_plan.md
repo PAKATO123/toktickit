@@ -91,7 +91,7 @@ Replace the Lab 1 Bootstrap scaffold with the Zen Green design system and a prop
 
 **Branch:** `feature/lab02-03-ui-foundation`
 
----
+--- NOTE : This is where i realized that i have been writing my branches in wrong names for previous features as well but it's too late to change them now since i have already committed and pushed them to github.
 
 ### F-04 · Development Requester Selector
 **Prerequisites:** F-02 (API), F-03 (shell)
