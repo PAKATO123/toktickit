@@ -364,6 +364,97 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// Ticket Detail API — GET /api/tickets/:id (F-09)
+// ---------------------------------------------------------------------------
+app.get("/api/tickets/:id", async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+
+    // 1. Validate ID param
+    const ticketId = parseInt(req.params.id, 10);
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_QUERY",
+          message: "Invalid ticket ID parameter.",
+        },
+      });
+    }
+
+    // 2. Validate requesterId query param
+    const requesterIdRaw = req.query.requesterId;
+    if (!requesterIdRaw) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_QUERY",
+          message: "requesterId query parameter is required.",
+        },
+      });
+    }
+
+    const requesterId = parseInt(String(requesterIdRaw), 10);
+    if (isNaN(requesterId)) {
+      return res.status(400).json({
+        error: {
+          code: "INVALID_QUERY",
+          message: "requesterId must be a valid integer.",
+        },
+      });
+    }
+
+    // 3. Query Ticket with relations and active attachments
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: {
+        category: { select: { id: true, name: true } },
+        relatedSystem: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true, department: true } },
+        attachments: {
+          where: { isDeleted: false },
+          select: {
+            id: true,
+            fileName: true,
+            contentType: true,
+            fileSize: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!ticket) {
+      return res.status(404).json({
+        error: {
+          code: "TICKET_NOT_FOUND",
+          message: "The requested ticket could not be found.",
+        },
+      });
+    }
+
+    // 4. Ownership Validation (BR-10, FR-24, AC-38)
+    if (ticket.requesterId !== requesterId) {
+      return res.status(403).json({
+        error: {
+          code: "FORBIDDEN",
+          message: "You do not have permission to view this ticket.",
+        },
+      });
+    }
+
+    return res.status(200).json({ data: ticket });
+  } catch (error) {
+    console.error("Error loading ticket detail:", error);
+    return res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Unable to load ticket detail.",
+      },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Ticket Creation API — POST /api/tickets (F-05)
 // ---------------------------------------------------------------------------
 app.post("/api/tickets", upload.array("attachments", 10), async (req: Request, res: Response) => {
