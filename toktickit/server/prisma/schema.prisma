@@ -67,15 +67,17 @@ model Ticket {
 }
 
 model Attachment {
-  id          Int      @id @default(autoincrement())
-  ticketId    Int
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  fileName    String
-  contentType String
-  fileSize    Int
-  fileData    Bytes    @db.ByteA
-  isDeleted   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id            Int       @id @default(autoincrement())
+  ticketId      Int
+  ticket        Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  fileName      String
+  contentType   String
+  fileSize      Int
+  fileData      Bytes     @db.ByteA
+  isDeleted     Boolean   @default(false)
+  removalReason String?
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
 
   @@index([ticketId, isDeleted])
 }

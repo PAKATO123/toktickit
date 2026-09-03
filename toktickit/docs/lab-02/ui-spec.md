@@ -206,7 +206,7 @@ When no Requester is selected, or when the user invokes the "Change Requester" a
      - **Requested Priority** (Optional): Dropdown (`Urgent`, `High`, `Medium`, `Low`, `None`).
    - **Content Section (Full Width)**:
      - **Summary (Title)** `*`: Text input (max 255 chars).
-     - **Description** `*`: Multi-line textarea (min 20 chars). Displays red border (`#C53030`) and inline error text immediately below when invalid on submit.
+     - **Description** `*`: Multi-line textarea (required, non-empty text). Displays red border (`#C53030`) and inline error text immediately below when blank on submit. Does NOT display a character counter or 20-char minimum text indicator.
    - **Attachment Staging Area (Below Main Fields)**:
      - Drag-and-drop zone with file picker button.
      - Live counter: `Attachments (X / 5)`.
@@ -231,11 +231,20 @@ When no Requester is selected, or when the user invokes the "Change Requester" a
 3. **Attachment Section**:
    - Distinct section separated from ticket information.
    - Title: `Attachments (X / 5 active)`.
-   - List of active attachments showing:
+   - **Active Attachments**:
      - File icon (image / PDF icon).
-     - File name, file size (formatted KB/MB), upload date.
-     - `Download` button (Primary/Secondary Green).
-     - `Delete / Remove` button (soft-delete, opens confirmation modal before removal).
+     - **File Metadata Name**: Clickable text link/button that opens the **Inline Attachment Preview Modal** rendering image/PDF preview.
+     - File size (formatted KB/MB) and upload date.
+     - `Download` button (Primary/Secondary Green, downloads stored binary).
+     - `Delete / Remove` button (soft-delete, opens **Removal Reason Modal** requiring non-empty reason text before confirming).
+   - **Removal Reason Modal**:
+     - Modal dialog requesting: *"Please provide a reason for removing this attachment"*.
+     - Text input / textarea for removal reason. Confirm button disabled while input is blank (min 1 char required).
+   - **Soft-Removed Attachments**:
+     - Positioned at the **bottom of the attachment list**.
+     - Rendered in **greyed-out text** (`color: var(--color-text-muted)` / `#A0AEC0`) with an **"X" cross icon** (`❌` / `✕`) next to the filename metadata.
+     - Displays removal reason (`Reason: "[reason]"`) and deletion timestamp.
+     - Download and preview actions are disabled.
    - `+ Add Attachment` button (disabled if 5 active attachments exist).
 4. **Access Control (403 Forbidden State)**:
    - If attempting to view a ticket belonging to another requester, render a dedicated **403 Forbidden Card**: *"Access Denied: You do not have permission to view this ticket."* with a button to return to My Tickets.
