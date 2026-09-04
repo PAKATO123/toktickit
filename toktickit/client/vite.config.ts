@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 const viteConfig = defineViteConfig({
   plugins: [react()],
   server: {
+    host: true, //remove this
     port: 5173,
     proxy: {
       "/api": {

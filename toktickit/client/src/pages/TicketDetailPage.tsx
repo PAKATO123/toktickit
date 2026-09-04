@@ -429,26 +429,45 @@ export const TicketDetailPage: React.FC = () => {
           </div>
 
           <div className="tt-card">
-            {/* Requester Identity */}
-            <div className="tt-form-group">
-              <label className="tt-label">Development Requester</label>
-              <input
-                type="text"
-                className="tt-input tt-readonly"
-                readOnly
-                value={`${ticket.requester?.name || selectedRequester?.name} (${ticket.requester?.department || selectedRequester?.department})`}
-              />
+            {/* 3 Read-Only Fields (Ticket Number, Requester Name, Requester ID) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label">Ticket #</label>
+                <input type="text" className="tt-input tt-readonly" readOnly value={ticket.ticketNumber} />
+              </div>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label">Requester Name</label>
+                <input
+                  type="text"
+                  className="tt-input tt-readonly"
+                  readOnly
+                  value={ticket.requester?.name || selectedRequester?.name || "N/A"}
+                />
+              </div>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label">Requester ID</label>
+                <input type="text" className="tt-input tt-readonly" readOnly value={String(ticket.requesterId)} />
+              </div>
             </div>
 
-            {/* Category & Related System Grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-              <div className="tt-form-group">
+            {/* Category, Related System, and Requested Priority Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
                 <label className="tt-label">Category</label>
                 <input type="text" className="tt-input tt-readonly" readOnly value={ticket.category.name} />
               </div>
-              <div className="tt-form-group">
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
                 <label className="tt-label">Related System</label>
                 <input type="text" className="tt-input tt-readonly" readOnly value={ticket.relatedSystem.name} />
+              </div>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label">Requested Priority</label>
+                <input
+                  type="text"
+                  className="tt-input tt-readonly"
+                  readOnly
+                  value={ticket.requestedPriority || "Unassigned"}
+                />
               </div>
             </div>
 

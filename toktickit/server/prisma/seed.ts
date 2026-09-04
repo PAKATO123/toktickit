@@ -24,160 +24,55 @@ const RELATED_SYSTEMS = [
   { name: "ERP & Operations", description: "Enterprise resource planning and supply chain tracking", isActive: true },
 ];
 
-const SEED_TICKETS = [
-  {
-    ticketNumber: "TICK-2026-0001",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Account and Access",
-    systemName: "Email & Collaboration",
-    summary: "Critical email access lockout during launch",
-    description: "I am completely locked out of my corporate email account during our major product launch.",
-    requestedPriority: "URGENT",
-    currentStatus: "In Progress",
-  },
-  {
-    ticketNumber: "TICK-2026-0002",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Hardware",
-    systemName: "VPN & Remote Access",
-    summary: "External monitor flickering violently",
-    description: "My dual monitor setup flickers uncontrollably whenever I open IDE software.",
-    requestedPriority: "HIGH",
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0003",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Software",
-    systemName: "Financial & Billing System",
-    summary: "Expense report export failing with 500 error",
-    description: "Exporting monthly expense report CSV results in an unhandled backend exception.",
-    requestedPriority: "MEDIUM",
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0004",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Network",
-    systemName: "VPN & Remote Access",
-    summary: "VPN connection disconnects every 15 minutes",
-    description: "The corporate VPN disconnects automatically after 15 minutes of continuous usage.",
-    requestedPriority: "LOW",
-    currentStatus: "Resolved",
-  },
-  {
-    ticketNumber: "TICK-2026-0005",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Account and Access",
-    systemName: "HR & Payroll Portal",
-    summary: "Update direct deposit bank account details",
-    description: "Need help updating my direct deposit bank routing number for the upcoming payroll run.",
-    requestedPriority: null,
-    currentStatus: "Closed",
-  },
-  {
-    ticketNumber: "TICK-2026-0006",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Software",
-    systemName: "CRM & Customer Support",
-    summary: "CRM dashboard charts not loading metrics",
-    description: "The analytics charts on the main CRM dashboard display blank loading placeholders indefinitely.",
-    requestedPriority: "URGENT",
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0007",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Hardware",
-    systemName: "Email & Collaboration",
-    summary: "Replacement wireless mouse needed",
-    description: "My current Bluetooth mouse roller wheel broke down during editing.",
-    requestedPriority: "LOW",
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0008",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Account and Access",
-    systemName: "ERP & Operations",
-    summary: "Requesting admin role for ERP staging environment",
-    description: "Need administrative permissions on the staging ERP instance for running migration tests.",
-    requestedPriority: "HIGH",
-    currentStatus: "In Progress",
-  },
-  {
-    ticketNumber: "TICK-2026-0009",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Network",
-    systemName: "Email & Collaboration",
-    summary: "Wi-Fi connectivity slow in 4th floor conference room",
-    description: "Wireless network latency spikes to over 800ms during team video syncs.",
-    requestedPriority: "MEDIUM",
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0010",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Software",
-    systemName: "HR & Payroll Portal",
-    summary: "PTO balance calculation discrepancy",
-    description: "My accrued paid time off shows 2 days fewer than my approved rollover balance.",
-    requestedPriority: null,
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0011",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Account and Access",
-    systemName: "Financial & Billing System",
-    summary: "Password reset for billing portal",
-    description: "Forgotten security questions for billing portal login page.",
-    requestedPriority: "HIGH",
-    currentStatus: "Resolved",
-  },
-  {
-    ticketNumber: "TICK-2026-0012",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Hardware",
-    systemName: "ERP & Operations",
-    summary: "Laptop battery draining in 45 minutes",
-    description: "My developer laptop battery health degraded and drains completely under light load.",
-    requestedPriority: "URGENT",
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0013",
-    requesterEmail: "alice.chen@example.com",
-    categoryName: "Software",
-    systemName: "Email & Collaboration",
-    summary: "Slack integration notification delay",
-    description: "GitHub commit webhook notifications in Slack channels arrive with a 30-minute delay.",
-    requestedPriority: "LOW",
-    currentStatus: "New",
-  },
+const PRIORITIES: (string | null)[] = ["URGENT", "HIGH", "MEDIUM", "LOW", null];
+const STATUSES = ["New", "In Progress", "Resolved", "Closed"];
 
-  // Bob Smith tickets
-  {
-    ticketNumber: "TICK-2026-0014",
-    requesterEmail: "bob.smith@example.com",
-    categoryName: "Account and Access",
-    systemName: "CRM & Customer Support",
-    summary: "Bob marketing permissions update",
-    description: "Requesting lead management access permissions in CRM.",
-    requestedPriority: "HIGH",
-    currentStatus: "New",
-  },
-  {
-    ticketNumber: "TICK-2026-0015",
-    requesterEmail: "bob.smith@example.com",
-    categoryName: "Software",
-    systemName: "Email & Collaboration",
-    summary: "Canva Pro license transfer request",
-    description: "Please transfer the design software license to my corporate marketing email.",
-    requestedPriority: "MEDIUM",
-    currentStatus: "In Progress",
-  },
+const ISSUE_TEMPLATES = [
+  { summary: "Critical email access lockout during launch", description: "I am completely locked out of my corporate email account during our major product launch." },
+  { summary: "External monitor flickering violently", description: "My dual monitor setup flickers uncontrollably whenever I open IDE software." },
+  { summary: "Expense report export failing with 500 error", description: "Exporting monthly expense report CSV results in an unhandled backend exception." },
+  { summary: "VPN connection disconnects every 15 minutes", description: "The corporate VPN disconnects automatically after 15 minutes of continuous usage." },
+  { summary: "Update direct deposit bank account details", description: "Need help updating my direct deposit bank routing number for the upcoming payroll run." },
+  { summary: "CRM dashboard charts not loading metrics", description: "The analytics charts on the main CRM dashboard display blank loading placeholders indefinitely." },
+  { summary: "Replacement wireless mouse needed", description: "My current Bluetooth mouse roller wheel broke down during editing." },
+  { summary: "Requesting admin role for ERP staging environment", description: "Need administrative permissions on the staging ERP instance for running migration tests." },
+  { summary: "Wi-Fi connectivity slow in 4th floor conference room", description: "Wireless network latency spikes to over 800ms during team video syncs." },
+  { summary: "PTO balance calculation discrepancy", description: "My accrued paid time off shows 2 days fewer than my approved rollover balance." },
+  { summary: "Password reset for billing portal", description: "Forgotten security questions for billing portal login page." },
+  { summary: "Laptop battery draining in 45 minutes", description: "My developer laptop battery health degraded and drains completely under light load." },
+  { summary: "Slack integration notification delay", description: "GitHub commit webhook notifications in Slack channels arrive with a 30-minute delay." },
+  { summary: "Docker desktop container network gateway error", description: "Docker containers cannot resolve local internal DNS hostnames on macOS." },
+  { summary: "Kibana log streaming index lifecycle policy issue", description: "Production application logs are not indexing into Elasticsearch indices." },
+  { summary: "SSO multi-factor authentication SMS code not arriving", description: "MFA verification text messages fail to deliver to mobile device." },
+  { summary: "Database connection pool exhausted during peak hours", description: "PostgreSQL server exceeds max connections during morning peak hours." },
+  { summary: "SSL certificate expiration warning on internal staging", description: "Internal SSL wildcard certificate expires in 3 days." },
 ];
+
+// 36 Total Tickets: Alice Chen (26), Bob Smith (5), Diana Prince (5), Carlos Ray (0 - empty)
+const SEED_TICKETS = Array.from({ length: 36 }, (_, i) => {
+  const seq = i + 1;
+  const numStr = String(seq).padStart(4, "0");
+  const ticketNumber = `TICK-2026-${numStr}`;
+  
+  // 26 for Alice Chen, 5 for Bob Smith, 5 for Diana Prince, 0 for Carlos Ray
+  const requesterEmail = seq <= 26 ? "alice.chen@example.com" : seq <= 31 ? "bob.smith@example.com" : "diana.prince@example.com";
+  const categoryName = CATEGORIES[i % CATEGORIES.length].name;
+  const systemName = RELATED_SYSTEMS[i % RELATED_SYSTEMS.length].name;
+  const tpl = ISSUE_TEMPLATES[i % ISSUE_TEMPLATES.length];
+  const requestedPriority = PRIORITIES[i % PRIORITIES.length];
+  const currentStatus = STATUSES[i % STATUSES.length];
+
+  return {
+    ticketNumber,
+    requesterEmail,
+    categoryName,
+    systemName,
+    summary: tpl.summary,
+    description: tpl.description,
+    requestedPriority,
+    currentStatus,
+  };
+});
 
 async function main() {
   const prisma = getPrisma();
@@ -243,7 +138,7 @@ async function main() {
       },
     });
   }
-  console.log(`Seeded ${SEED_TICKETS.length} tickets with diverse priorities and statuses.`);
+  console.log(`Seeded ${SEED_TICKETS.length} tickets (Alice Chen: 26, Bob Smith: 5, Diana Prince: 5, Carlos Ray: 0).`);
 }
 
 main()

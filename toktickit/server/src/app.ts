@@ -27,6 +27,22 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
+// Next Ticket Number Preview API — GET /api/tickets/next-number
+// ---------------------------------------------------------------------------
+app.get("/api/tickets/next-number", async (_req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const nextTicketNumber = await generateTicketNumber(prisma as any);
+    return res.status(200).json({ data: { nextTicketNumber } });
+  } catch (error) {
+    console.error("Error generating next ticket number:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to generate next ticket number." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Reference Data APIs — GET /api/requesters, GET /api/related-systems, GET /api/categories
 // ---------------------------------------------------------------------------
 app.get("/api/requesters", async (_req: Request, res: Response) => {
