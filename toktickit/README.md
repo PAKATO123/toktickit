@@ -7,11 +7,17 @@ TokTickIT is an internal IT support ticketing application built with **React** (
 ## Setup Instructions
 
 ### 1. Install Dependencies
-Install dependencies for both frontend (`client`) and backend (`server`):
+Install dependencies for root (E2E testing), frontend (`client`), and backend (`server`):
 ```bash
+# Root dependencies (Playwright)
+npm install
+npx playwright install chromium
+
+# Frontend client
 cd client
 npm install
 
+# Backend server
 cd ../server
 npm install
 ```
@@ -54,7 +60,7 @@ npm run dev
 
 ## Testing
 
-Both server and client use **Vitest** for automated testing.
+The project is thoroughly tested across Unit, Integration/API, UI Component, and End-to-End (E2E) levels.
 
 - **Backend Integration Tests (42 tests across 8 suites):**
   ```bash
@@ -67,4 +73,16 @@ Both server and client use **Vitest** for automated testing.
   cd client
   npm run test
   ```
-
+
+- **End-to-End (E2E) Browser Tests (Playwright):**
+  *Make sure both client (`http://localhost:5173`) and server (`http://localhost:3000`) are running.*
+  ```bash
+  # Run all E2E tests headlessly
+  npm run test:e2e
+
+  # Run E2E tests with visual browser (headed)
+  npm run test:e2e:headed
+
+  # Open interactive Playwright UI dashboard
+  npm run test:e2e:ui
+  ```

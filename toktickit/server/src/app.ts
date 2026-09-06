@@ -900,4 +900,34 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Centralized Error Handling Middleware (including Multer errors)
+// ---------------------------------------------------------------------------
+app.use((err: any, _req: Request, res: Response, _next: any) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        error: {
+          code: "PAYLOAD_TOO_LARGE",
+          message: "Attachment exceeds size limit.",
+        },
+      });
+    }
+    return res.status(400).json({
+      error: {
+        code: "INVALID_UPLOAD",
+        message: err.message,
+      },
+    });
+  }
+
+  console.error("Unhandled server error:", err);
+  return res.status(500).json({
+    error: {
+      code: "INTERNAL_ERROR",
+      message: err.message || "An unexpected internal server error occurred.",
+    },
+  });
+});
+
 export default app;

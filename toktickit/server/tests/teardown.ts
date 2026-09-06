@@ -1,22 +1,9 @@
 import { getPrisma } from "../src/prisma.js";
 
-const SEED_TICKET_NUMBERS = [
-  "TICK-2026-0001",
-  "TICK-2026-0002",
-  "TICK-2026-0003",
-  "TICK-2026-0004",
-  "TICK-2026-0005",
-  "TICK-2026-0006",
-  "TICK-2026-0007",
-  "TICK-2026-0008",
-  "TICK-2026-0009",
-  "TICK-2026-0010",
-  "TICK-2026-0011",
-  "TICK-2026-0012",
-  "TICK-2026-0013",
-  "TICK-2026-0014",
-  "TICK-2026-0015",
-];
+const SEED_TICKET_NUMBERS = Array.from({ length: 36 }, (_, i) => {
+  const numStr = String(i + 1).padStart(4, "0");
+  return `TICK-2026-${numStr}`;
+});
 
 export default async function teardown() {
   const prisma = getPrisma();
