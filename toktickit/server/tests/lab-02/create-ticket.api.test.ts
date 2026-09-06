@@ -1,11 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
 import { resetRateLimits } from "../../src/utils/rateLimiter.js";
+import teardown from "../teardown.js";
 
 describe("Lab 02 Feature 5 — Create Ticket API (POST /api/tickets)", () => {
   beforeEach(() => {
     resetRateLimits();
+  });
+
+  afterAll(async () => {
+    await teardown();
   });
 
   describe("Happy Path Ticket Creation", () => {
