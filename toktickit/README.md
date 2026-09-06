@@ -1,48 +1,70 @@
-# TokTickIT 
+# TokTickIT — Internal IT Ticketing System (Lab 02 Implementation)
+
+TokTickIT is an internal IT support ticketing application built with **React** (TypeScript, Vite, Vanilla CSS), **Express** (Node.js REST API), **Prisma ORM**, and **PostgreSQL**.
+
+---
 
 ## Setup Instructions
 
-1. **Install Dependencies**
-   Navigate to the `client` and `server` directories and install dependencies:
-   ```bash
-   cd client
-   npm install
+### 1. Install Dependencies
+Install dependencies for both frontend (`client`) and backend (`server`):
+```bash
+cd client
+npm install
 
-   cd ../server
-   npm install
-   ```
+cd ../server
+npm install
+```
 
-2. **Environment Variables**
-   In the `server` directory, copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   Update the `DATABASE_URL` in `.env` with your PostgreSQL connection string.
+### 2. Environment Variables
+In the `server/` directory, copy `.env.example` to `.env`:
+```bash
+cd server
+cp .env.example .env
+```
+Ensure `DATABASE_URL` in `.env` points to your active PostgreSQL instance.
 
-3. **Database Setup**
-   Ensure your PostgreSQL server is running. Then, push the schema to your database:
-   ```bash
-   cd server
-   npx prisma db push
-   ```
+### 3. Database Migration & Seeding
+Push the Prisma schema to PostgreSQL and seed initial reference data (Development Requesters, Categories, Related Systems):
+```bash
+cd server
+npx prisma db push
+npm run prisma:seed
+```
 
-4. **Running the Application**
-   Start the frontend (Vite) and backend (Express) development servers:
-   
-   **Frontend:**
-   ```bash
-   cd client
-   npm run dev
-   ```
+---
 
-   **Backend:**
-   ```bash
-   cd server
-   npm run dev
-   ```
+## Running the Application
 
-5. **Testing**
-   Both client and server use Vitest. To run tests:
-   ```bash
-   npm run test
-   ```
+Start the backend API and frontend client development servers:
+
+**Backend API (`http://localhost:3000`):**
+```bash
+cd server
+npm run dev
+```
+
+**Frontend Client (`http://localhost:5173`):**
+```bash
+cd client
+npm run dev
+```
+
+---
+
+## Testing
+
+Both server and client use **Vitest** for automated testing.
+
+- **Backend Integration Tests (42 tests across 8 suites):**
+  ```bash
+  cd server
+  npm run test
+  ```
+
+- **Frontend Component Tests (28 tests across 7 suites):**
+  ```bash
+  cd client
+  npm run test
+  ```
+

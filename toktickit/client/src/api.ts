@@ -1,6 +1,6 @@
 import { Requester } from "./types/requester";
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
 export interface Category {
   id: number;
@@ -38,6 +38,17 @@ export async function getCategories(): Promise<Category[]> {
   }
   const json = await res.json();
   return json.data || [];
+}
+
+export async function getNextTicketNumber(): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/tickets/next-number`);
+    if (!res.ok) return "TICK-2026-XXXX";
+    const json = await res.json();
+    return json.data?.nextTicketNumber || "TICK-2026-XXXX";
+  } catch {
+    return "TICK-2026-XXXX";
+  }
 }
 
 export interface AttachmentMeta {

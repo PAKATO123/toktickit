@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
-import { getCategories, getRelatedSystems, Category, RelatedSystem, API_BASE_URL } from "../api";
+import { getCategories, getRelatedSystems, getNextTicketNumber, Category, RelatedSystem, API_BASE_URL } from "../api";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB (BR-27)
@@ -13,6 +13,7 @@ export const CreateTicketPage: React.FC = () => {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);
+  const [previewTicketNumber, setPreviewTicketNumber] = useState<string>("TICK-2026-XXXX");
   const [loadingData, setLoadingData] = useState<boolean>(true);
   const [dataError, setDataError] = useState<string | null>(null);
 
@@ -31,17 +32,22 @@ export const CreateTicketPage: React.FC = () => {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
 
-  // Fetch Category & System options on mount
+  // Fetch Category & System options and Next Ticket Number on mount
   useEffect(() => {
     let isMounted = true;
     async function loadOptions() {
       setLoadingData(true);
       setDataError(null);
       try {
-        const [cats, syss] = await Promise.all([getCategories(), getRelatedSystems()]);
+        const [cats, syss, nextNum] = await Promise.all([
+          getCategories(),
+          getRelatedSystems(),
+          getNextTicketNumber(),
+        ]);
         if (isMounted) {
           setCategories(cats);
           setRelatedSystems(syss);
+          setPreviewTicketNumber(nextNum);
         }
       } catch (err: any) {
         if (isMounted) {
@@ -278,54 +284,110 @@ export const CreateTicketPage: React.FC = () => {
           </div>
         ) : (
           <form onSubmit={handleSubmit} noValidate>
-            {/* Category */}
-            <div className="tt-form-group">
-              <label className="tt-label" htmlFor="category-select">
-                Category <span className="tt-required-asterisk">*</span>
-              </label>
-              <select
-                id="category-select"
-                className="tt-select"
-                value={categoryId}
-                onChange={(e) => {
-                  setCategoryId(e.target.value);
-                  setFieldErrors((prev) => ({ ...prev, categoryId: "" }));
-                }}
-                style={fieldErrors.categoryId ? { borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)" } : {}}
-              >
-                <option value="">-- Select Category --</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              {fieldErrors.categoryId && <span className="tt-error-message">{fieldErrors.categoryId}</span>}
+            {/* 3 Read-Only Fields (Ticket Number, Requester Name, Requester ID) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label" htmlFor="ticket-number-readonly">To-Be-Created Ticket #</label>
+                <input
+                  id="ticket-number-readonly"
+                  type="text"
+                  className="tt-input tt-readonly"
+                  readOnly
+                  value={previewTicketNumber}
+                />
+              </div>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label" htmlFor="requester-name-readonly">Requester Name</label>
+                <input
+                  id="requester-name-readonly"
+                  type="text"
+                  className="tt-input tt-readonly"
+                  readOnly
+                  value={selectedRequester?.name || "N/A"}
+                />
+              </div>
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label" htmlFor="requester-id-readonly">Requester ID</label>
+                <input
+                  id="requester-id-readonly"
+                  type="text"
+                  className="tt-input tt-readonly"
+                  readOnly
+                  value={selectedRequester?.id ? String(selectedRequester.id) : "N/A"}
+                />
+              </div>
             </div>
 
-            {/* Related System */}
-            <div className="tt-form-group">
-              <label className="tt-label" htmlFor="system-select">
-                Related System <span className="tt-required-asterisk">*</span>
-              </label>
-              <select
-                id="system-select"
-                className="tt-select"
-                value={relatedSystemId}
-                onChange={(e) => {
-                  setRelatedSystemId(e.target.value);
-                  setFieldErrors((prev) => ({ ...prev, relatedSystemId: "" }));
-                }}
-                style={fieldErrors.relatedSystemId ? { borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)" } : {}}
-              >
-                <option value="">-- Select Related System --</option>
-                {relatedSystems.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              {fieldErrors.relatedSystemId && <span className="tt-error-message">{fieldErrors.relatedSystemId}</span>}
+            {/* Category, Related System, and Requested Priority (3 fields in one line above Summary) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+              {/* Category */}
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label" htmlFor="category-select">
+                  Category <span className="tt-required-asterisk">*</span>
+                </label>
+                <select
+                  id="category-select"
+                  className="tt-select"
+                  value={categoryId}
+                  onChange={(e) => {
+                    setCategoryId(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, categoryId: "" }));
+                  }}
+                  style={fieldErrors.categoryId ? { borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)" } : {}}
+                >
+                  <option value="">-- Select Category --</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.categoryId && <span className="tt-error-message">{fieldErrors.categoryId}</span>}
+              </div>
+
+              {/* Related System */}
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label" htmlFor="system-select">
+                  Related System <span className="tt-required-asterisk">*</span>
+                </label>
+                <select
+                  id="system-select"
+                  className="tt-select"
+                  value={relatedSystemId}
+                  onChange={(e) => {
+                    setRelatedSystemId(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, relatedSystemId: "" }));
+                  }}
+                  style={fieldErrors.relatedSystemId ? { borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)" } : {}}
+                >
+                  <option value="">-- Select Related System --</option>
+                  {relatedSystems.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.relatedSystemId && <span className="tt-error-message">{fieldErrors.relatedSystemId}</span>}
+              </div>
+
+              {/* Requested Priority */}
+              <div className="tt-form-group" style={{ marginBottom: 0 }}>
+                <label className="tt-label" htmlFor="priority-select">
+                  Requested Priority
+                </label>
+                <select
+                  id="priority-select"
+                  className="tt-select"
+                  value={requestedPriority}
+                  onChange={(e) => setRequestedPriority(e.target.value)}
+                >
+                  <option value="">-- Optional (Omitted) --</option>
+                  <option value="URGENT">Urgent</option>
+                  <option value="HIGH">High</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="LOW">Low</option>
+                </select>
+              </div>
             </div>
 
             {/* Summary */}
@@ -366,25 +428,6 @@ export const CreateTicketPage: React.FC = () => {
                 style={fieldErrors.description ? { borderColor: "var(--color-error)", backgroundColor: "var(--color-error-bg)" } : {}}
               />
               {fieldErrors.description && <span className="tt-error-message">{fieldErrors.description}</span>}
-            </div>
-
-            {/* Priority */}
-            <div className="tt-form-group">
-              <label className="tt-label" htmlFor="priority-select">
-                Requested Priority
-              </label>
-              <select
-                id="priority-select"
-                className="tt-select"
-                value={requestedPriority}
-                onChange={(e) => setRequestedPriority(e.target.value)}
-              >
-                <option value="">-- Optional (Omitted) --</option>
-                <option value="URGENT">Urgent</option>
-                <option value="HIGH">High</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="LOW">Low</option>
-              </select>
             </div>
 
             {/* Attachments Section */}
