@@ -815,11 +815,37 @@ Soft-deleted Attachments must behave as unavailable resources and must never be 
 
 ---
 
-## 7.4 Soft-Remove Attachment
+## 7.4 Preview Active Attachment
+
+### `GET /api/attachments/:attachmentId/preview?requesterId=:requesterId`
+
+Previews the binary contents of an active Attachment inline in browser or preview modal.
+
+### Ownership Check
+
+The backend must resolve `Attachment → Ticket → Requester` and verify that the Ticket belongs to `requesterId`.
+
+### Success — `200 OK`
+
+Response body contains the stored binary data with inline disposition:
+
+```text
+Content-Type: <stored content type>
+Content-Disposition: inline; filename="<safe filename>"
+Content-Length: <file size>
+```
+
+### Soft-Deleted Attachment — `404 Not Found`
+
+Soft-deleted attachments cannot be previewed and return `404 ATTACHMENT_NOT_FOUND`.
+
+---
+
+## 7.5 Soft-Remove Attachment
 
 ### `DELETE /api/attachments/:attachmentId`
 
-Soft-removes an Attachment belonging to the selected Requester's Ticket.
+Soft-removes an Attachment belonging to the selected Requester's Ticket, requiring a non-empty removal reason.
 
 ### Request
 
@@ -827,28 +853,26 @@ Soft-removes an Attachment belonging to the selected Requester's Ticket.
 
 ```json
 {
-  "requesterId": 1
+  "requesterId": 1,
+  "reason": "Uploaded wrong file version"
 }
 ```
 
+`reason` is required and must contain at least 1 non-whitespace character.
+
 ### Behavior
 
-The API does not physically delete the Attachment row.
-
-Instead:
+The API sets:
 
 ```text
 isDeleted = true
+removalReason = reason.trim()
+deletedAt = current timestamp
 ```
 
-The binary data remains stored in the database but becomes inaccessible through the requester-facing API.
+The binary data remains stored in the database but becomes inaccessible for downloading or previewing.
 
-The Attachment must no longer:
-
-* appear in active Attachment metadata;
-* appear in Ticket Detail;
-* be downloadable;
-* be previewable.
+In Ticket Detail, soft-deleted attachments remain visible at the bottom of the attachment list with `isDeleted: true`, `removalReason`, and `deletedAt` for requester rendering.
 
 ### Success — `200 OK`
 
@@ -856,7 +880,28 @@ The Attachment must no longer:
 {
   "data": {
     "id": 1,
-    "isDeleted": true
+    "isDeleted": true,
+    "removalReason": "Uploaded wrong file version",
+    "deletedAt": "2026-09-03T10:00:00.000Z"
+  }
+}
+```
+
+### Validation Error — `422 Unprocessable Entity`
+
+If `reason` is missing or empty:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Removal reason is required.",
+    "details": [
+      {
+        "field": "reason",
+        "message": "Removal reason is required."
+      }
+    ]
   }
 }
 ```

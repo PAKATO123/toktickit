@@ -228,8 +228,8 @@ Requester Ticketing MVP with UI Foundation
 - **BR-11 : Mandatory Fields**  
   A Ticket cannot be created without a selected Category, a selected Related System, a Ticket Summary (title), and a Ticket Description.
 
-- **BR-12 : Minimum Description Length**  
-  A Ticket Description must contain at least 20 characters (inclusive of whitespace) to be valid for submission.
+- **BR-12 : Non-Empty Description Requirement**  
+  A Ticket Description must contain non-empty text (at least 1 character) to be valid for submission.
 
 - **BR-13 : Optional Ticket Fields**  
   Requested Priority and initial Attachments are optional; a Requester may submit a Ticket without selecting a Requested Priority or attaching files.
@@ -287,11 +287,11 @@ Requester Ticketing MVP with UI Foundation
 - **BR-29 : Atomic Creation on Attachment Failure**  
   If any attachment fails validation or upload during initial Ticket creation, the entire creation process shall fail and no ticket record shall be created.
 
-- **BR-30 : Soft Deletion of Attachments**  
-  Removing an attachment shall set a soft-deletion flag on the attachment record rather than physically deleting it from the database.
+- **BR-30 : Soft Deletion of Attachments & Removal Reason**  
+  Removing an attachment from a created ticket requires the requester to enter a removal reason (non-empty text, minimum 1 character). Removing an attachment sets `isDeleted = true`, stores `removalReason`, and sets the `deletedAt` timestamp on the attachment record rather than physically deleting it from the database.
 
-- **BR-31 : Soft-Deleted Attachment Inaccessibility**  
-  Soft-deleted attachments must be completely hidden from user views and cannot be downloaded, previewed, or restored.
+- **BR-31 : Soft-Deleted Attachment Inaccessibility & Requester Perspective**  
+  Soft-deleted attachments cannot be downloaded, previewed, or restored. In the requester perspective on created tickets, soft-deleted attachments remain visible at the **bottom of the attachment list**, rendered in **greyed-out text** with an **"X" cross icon** (`❌`) next to the filename metadata, displaying the removal reason and deletion timestamp with preview and download actions disabled.
 
 ### Reference Data & Seed Constraints
 - **BR-32 : Mandatory Categories Seed Data**  
@@ -467,6 +467,8 @@ Create the `Attachment` entity model with PostgreSQL `bytea` binary storage.
 | `fileSize` | Integer | Required | Binary file size in bytes (max 5 MB / 5,242,880 bytes, `BR-27`) |
 | `fileData` | Bytes | Required (`@db.ByteA`, `BR-26`) | Direct binary storage in PostgreSQL |
 | `isDeleted` | Boolean | Required, default `false` (`@default(false)`, `BR-30`) | Soft-deletion flag (`BR-31`) |
+| `removalReason` | String | Optional (`removalReason String?`, `BR-30`) | User-provided reason for removing attachment (min 1 char) |
+| `deletedAt` | DateTime | Optional (`deletedAt DateTime?`) | Soft-deletion timestamp |
 | `createdAt` | DateTime | Required, default `now()` (`@default(now())`) | Upload timestamp |
 
 ---
@@ -514,7 +516,8 @@ All REST endpoints operate under the `/api` base path and require the selected D
 | `POST` | `/api/tickets/:id/attachments` | Add attachment to an existing ticket (`FR-26`, `BR-26`–`BR-28`) | Multipart: `requesterId`, `file` | `201 Created` | `400`, `403`, `404`, `409`, `413`, `415`, `500` |
 | `GET` | `/api/tickets/:id/attachments` | List active attachment metadata for a ticket (`FR-27`) | Query: `requesterId` (req) | `200 OK` | `400`, `403`, `404`, `500` |
 | `GET` | `/api/attachments/:id/download` | Download attachment binary data stream (`FR-28`, `BR-31`) | Query: `requesterId` (req) | `200 OK` (binary stream) | `400`, `403`, `404`, `500` |
-| `DELETE` | `/api/attachments/:id` | Soft-remove attachment (`isDeleted = true`, `FR-29`–`FR-30`, `BR-30`) | Query/Body: `requesterId` (req) | `200 OK` | `400`, `403`, `404`, `500` |
+| `GET` | `/api/attachments/:id/preview` | Preview attachment binary stream inline (`Content-Disposition: inline`) | Query: `requesterId` (req) | `200 OK` (binary stream) | `400`, `403`, `404`, `500` |
+| `DELETE` | `/api/attachments/:id` | Soft-remove attachment with removal reason (`isDeleted = true`, `BR-30`) | JSON Body: `requesterId` (req), `reason` (req, min 1 char) | `200 OK` | `400`, `403`, `404`, `422`, `500` |
 
 ---
 

@@ -63,6 +63,10 @@ export const CreateTicketPage: React.FC = () => {
       categoryId || relatedSystemId || summary.trim() || description.trim() || requestedPriority || stagedFiles.length > 0
     );
     setIsFormDirty(isDirty);
+
+    return () => {
+      setIsFormDirty(false);
+    };
   }, [categoryId, relatedSystemId, summary, description, requestedPriority, stagedFiles, setIsFormDirty]);
 
   // Handle client-side file attachment selection & validation
@@ -125,8 +129,6 @@ export const CreateTicketPage: React.FC = () => {
     const trimmedDesc = description.trim();
     if (!trimmedDesc) {
       errors.description = "Description is required.";
-    } else if (trimmedDesc.length < 20) {
-      errors.description = "Description must contain at least 20 characters.";
     }
 
     setFieldErrors(errors);
@@ -349,23 +351,13 @@ export const CreateTicketPage: React.FC = () => {
 
             {/* Description */}
             <div className="tt-form-group">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <label className="tt-label" htmlFor="description-input">
-                  Description <span className="tt-required-asterisk">*</span>
-                </label>
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: description.trim().length < 20 ? "var(--color-error)" : "var(--color-text-muted)",
-                  }}
-                >
-                  {description.trim().length} / 20 chars minimum
-                </span>
-              </div>
+              <label className="tt-label" htmlFor="description-input">
+                Description <span className="tt-required-asterisk">*</span>
+              </label>
               <textarea
                 id="description-input"
                 className="tt-textarea"
-                placeholder="Full detailed explanation of the request (at least 20 characters)"
+                placeholder="Full detailed explanation of the request"
                 value={description}
                 onChange={(e) => {
                   setDescription(e.target.value);

@@ -110,13 +110,10 @@ describe("Lab 02 Feature 7 — Create Ticket Screen", () => {
 
     await screen.findByText(/Account and Access/i);
 
-    const descTextarea = screen.getByLabelText(/Description/i);
-    fireEvent.change(descTextarea, { target: { value: "Short input" } });
-
     const submitBtn = screen.getByRole("button", { name: /Submit Ticket/i });
     fireEvent.click(submitBtn);
 
-    expect(await screen.findByText(/Description must contain at least 20 characters/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Description is required./i)).toBeInTheDocument();
   });
 
   it("stages valid attachment file and allows removal", async () => {

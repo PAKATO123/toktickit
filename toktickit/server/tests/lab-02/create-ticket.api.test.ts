@@ -78,14 +78,14 @@ describe("Lab 02 Feature 5 — Create Ticket API (POST /api/tickets)", () => {
       expect(res.body.error.details.some((d: any) => d.field === "description")).toBe(true);
     });
 
-    it("rejects request with description < 20 characters with 422", async () => {
+    it("rejects request with empty description with 422", async () => {
       const res = await request(app)
         .post("/api/tickets")
         .field("requesterId", "1")
         .field("categoryId", "1")
         .field("relatedSystemId", "1")
         .field("summary", "Valid summary here")
-        .field("description", "Too short");
+        .field("description", "");
 
       expect(res.status).toBe(422);
       expect(res.body.error.code).toBe("VALIDATION_ERROR");

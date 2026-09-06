@@ -45,6 +45,9 @@ export interface AttachmentMeta {
   fileName: string;
   contentType: string;
   fileSize: number;
+  isDeleted?: boolean;
+  removalReason?: string | null;
+  deletedAt?: string | null;
   createdAt: string;
 }
 
@@ -74,4 +77,49 @@ export async function getTicketDetail(id: number | string, requesterId: number):
     throw error;
   }
   return json.data;
+}
+
+export async function addAttachmentToTicket(ticketId: number, requesterId: number, file: File): Promise<AttachmentMeta> {
+  const formData = new FormData();
+  formData.append("requesterId", String(requesterId));
+  formData.append("file", file);
+
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/attachments`, {
+    method: "POST",
+    body: formData,
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to add attachment.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function deleteAttachment(attachmentId: number, requesterId: number, reason: string): Promise<any> {
+  const res = await fetch(`${API_BASE_URL}/api/attachments/${attachmentId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ requesterId, reason }),
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to remove attachment.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export function getAttachmentDownloadUrl(attachmentId: number, requesterId: number): string {
+  return `${API_BASE_URL}/api/attachments/${attachmentId}/download?requesterId=${requesterId}`;
+}
+
+export function getAttachmentPreviewUrl(attachmentId: number, requesterId: number): string {
+  return `${API_BASE_URL}/api/attachments/${attachmentId}/preview?requesterId=${requesterId}`;
 }

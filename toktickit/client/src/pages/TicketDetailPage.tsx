@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
-import { getTicketDetail, TicketDetailData } from "../api";
+import {
+  getTicketDetail,
+  addAttachmentToTicket,
+  deleteAttachment,
+  getAttachmentDownloadUrl,
+  getAttachmentPreviewUrl,
+  TicketDetailData,
+  AttachmentMeta,
+} from "../api";
+
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB (BR-27)
 
 export const TicketDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +24,18 @@ export const TicketDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Attachment Management States
+  const [uploadingAttachment, setUploadingAttachment] = useState<boolean>(false);
+  const [attachmentActionError, setAttachmentActionError] = useState<string | null>(null);
+
+  // Modals
+  const [previewAttachment, setPreviewAttachment] = useState<AttachmentMeta | null>(null);
+  const [removingAttachment, setRemovingAttachment] = useState<AttachmentMeta | null>(null);
+  const [removalReasonInput, setRemovalReasonInput] = useState<string>("");
+  const [submittingRemoval, setSubmittingRemoval] = useState<boolean>(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [toastMessage, setToastMessage] = useState<string | null>(
     (location.state as { toastMessage?: string })?.toastMessage || null
@@ -38,37 +61,99 @@ export const TicketDetailPage: React.FC = () => {
     }
   }, [toastMessage]);
 
-  // Fetch ticket details on mount & when id or requester changes
-  useEffect(() => {
-    let isMounted = true;
+  const loadTicket = async () => {
+    if (!id || !selectedRequester) return;
 
-    async function loadTicket() {
-      if (!id || !selectedRequester) return;
+    setLoading(true);
+    setErrorStatus(null);
+    setErrorMessage(null);
 
-      setLoading(true);
-      setErrorStatus(null);
-      setErrorMessage(null);
-
-      try {
-        const data = await getTicketDetail(id, selectedRequester.id);
-        if (isMounted) {
-          setTicket(data);
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          console.error("Error fetching ticket detail:", err);
-          setErrorStatus(err.status || 500);
-          setErrorMessage(err.message || "Unable to load ticket details.");
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+    try {
+      const data = await getTicketDetail(id, selectedRequester.id);
+      setTicket(data);
+    } catch (err: any) {
+      console.error("Error fetching ticket detail:", err);
+      setErrorStatus(err.status || 500);
+      setErrorMessage(err.message || "Unable to load ticket details.");
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadTicket();
   }, [id, selectedRequester]);
+
+  // Handle Add Attachment File Picker
+  const handleAddAttachmentClick = () => {
+    setAttachmentActionError(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0 || !ticket || !selectedRequester) return;
+
+    const file = files[0];
+    e.target.value = ""; // reset file input
+
+    // Pre-validation checks (AC-20, AC-21)
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+      setAttachmentActionError("Unsupported file type. Only JPG, PNG, WEBP, and PDF files are allowed.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setAttachmentActionError("File size exceeds the 5 MB limit.");
+      return;
+    }
+
+    setUploadingAttachment(true);
+    setAttachmentActionError(null);
+
+    try {
+      await addAttachmentToTicket(ticket.id, selectedRequester.id, file);
+      // Reload ticket details to reflect new attachment
+      const refreshed = await getTicketDetail(ticket.id, selectedRequester.id);
+      setTicket(refreshed);
+    } catch (err: any) {
+      console.error("Error uploading attachment:", err);
+      if (err.status === 409) {
+        setAttachmentActionError("This ticket already has the maximum of 5 active attachments.");
+      } else {
+        setAttachmentActionError(err.message || "Failed to upload attachment.");
+      }
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
+
+  // Handle Attachment Removal Submission
+  const handleConfirmRemoval = async () => {
+    if (!removingAttachment || !ticket || !selectedRequester) return;
+    const trimmedReason = removalReasonInput.trim();
+    if (!trimmedReason) return;
+
+    setSubmittingRemoval(true);
+    try {
+      await deleteAttachment(removingAttachment.id, selectedRequester.id, trimmedReason);
+      setRemovingAttachment(null);
+      setRemovalReasonInput("");
+      // Refresh ticket details
+      const refreshed = await getTicketDetail(ticket.id, selectedRequester.id);
+      setTicket(refreshed);
+    } catch (err: any) {
+      console.error("Error removing attachment:", err);
+      setAttachmentActionError(err.message || "Failed to remove attachment.");
+      setRemovingAttachment(null);
+    } finally {
+      setSubmittingRemoval(false);
+    }
+  };
+
+  const activeAttachments = ticket?.attachments.filter((a) => !a.isDeleted) || [];
+  const deletedAttachments = ticket?.attachments.filter((a) => a.isDeleted) || [];
 
   const renderPriorityBadge = (priority: string | null) => {
     if (!priority) {
@@ -126,6 +211,15 @@ export const TicketDetailPage: React.FC = () => {
 
   return (
     <div style={{ maxWidth: "800px", margin: "0 auto", position: "relative" }}>
+      {/* Hidden file input for adding attachment */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/jpeg,image/png,image/webp,application/pdf"
+        style={{ display: "none" }}
+      />
+
       {/* Success Toast Notification */}
       {toastMessage && (
         <div className="tt-toast" role="status">
@@ -150,6 +244,135 @@ export const TicketDetailPage: React.FC = () => {
         </div>
       )}
 
+      {/* Inline Preview Modal */}
+      {previewAttachment && selectedRequester && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.65)",
+            zIndex: 1100,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setPreviewAttachment(null)}
+        >
+          <div
+            className="tt-card"
+            style={{
+              maxWidth: "800px",
+              maxHeight: "85vh",
+              width: "100%",
+              overflow: "auto",
+              position: "relative",
+              display: "flex",
+              flexDirection: "column",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0 }}>Preview: {previewAttachment.fileName}</h3>
+              <button
+                type="button"
+                className="tt-btn tt-btn-outline"
+                onClick={() => setPreviewAttachment(null)}
+                style={{ padding: "4px 10px" }}
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            <div style={{ textAlign: "center", flex: 1, overflow: "auto" }}>
+              {previewAttachment.contentType.includes("pdf") ? (
+                <object
+                  data={getAttachmentPreviewUrl(previewAttachment.id, selectedRequester.id)}
+                  type="application/pdf"
+                  width="100%"
+                  height="500px"
+                >
+                  <p>PDF preview unavailable in this browser. Use download button instead.</p>
+                </object>
+              ) : (
+                <img
+                  src={getAttachmentPreviewUrl(previewAttachment.id, selectedRequester.id)}
+                  alt={previewAttachment.fileName}
+                  style={{ maxWidth: "100%", maxHeight: "550px", borderRadius: "var(--radius-sm)", objectFit: "contain" }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Removal Reason Modal */}
+      {removingAttachment && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          <div className="tt-card" style={{ maxWidth: "500px", width: "100%" }}>
+            <h3 style={{ marginTop: 0, marginBottom: "8px" }}>Remove Attachment</h3>
+            <p style={{ color: "var(--color-text-muted)", fontSize: "14px", marginBottom: "16px" }}>
+              Are you sure you want to remove <strong>{removingAttachment.fileName}</strong>? Please enter a reason below.
+            </p>
+
+            <div className="tt-form-group">
+              <label className="tt-label" htmlFor="removal-reason-input">
+                Removal Reason <span className="tt-required-asterisk">*</span>
+              </label>
+              <textarea
+                id="removal-reason-input"
+                className="tt-textarea"
+                placeholder="Enter reason for removing this attachment..."
+                value={removalReasonInput}
+                onChange={(e) => setRemovalReasonInput(e.target.value)}
+                style={{ height: "80px" }}
+              />
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+              <button
+                type="button"
+                className="tt-btn tt-btn-outline"
+                disabled={submittingRemoval}
+                onClick={() => {
+                  setRemovingAttachment(null);
+                  setRemovalReasonInput("");
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="tt-btn tt-btn-primary"
+                style={{ backgroundColor: "var(--color-error)", borderColor: "var(--color-error)" }}
+                disabled={!removalReasonInput.trim() || submittingRemoval}
+                onClick={handleConfirmRemoval}
+              >
+                {submittingRemoval ? "Removing..." : "Confirm Removal"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginBottom: "16px" }}>
         <Link to="/tickets" style={{ fontSize: "14px", textDecoration: "none" }}>
           &larr; Back to My Tickets
@@ -162,7 +385,7 @@ export const TicketDetailPage: React.FC = () => {
           <p style={{ marginTop: "12px" }}>Loading ticket details...</p>
         </div>
       ) : errorStatus === 403 ? (
-        /* 403 Forbidden State View (BR-10, AC-38) */
+        /* 403 Forbidden State View */
         <div className="tt-card tt-empty-state" style={{ backgroundColor: "var(--color-error-bg)", borderColor: "var(--color-error)" }}>
           <h2 style={{ color: "var(--color-error)", marginBottom: "8px" }}>403 Access Denied</h2>
           <p style={{ color: "var(--color-text-main)", marginBottom: "20px" }}>
@@ -173,7 +396,7 @@ export const TicketDetailPage: React.FC = () => {
           </Link>
         </div>
       ) : errorStatus === 404 ? (
-        /* 404 Not Found State View (AC-40) */
+        /* 404 Not Found State View */
         <div className="tt-card tt-empty-state">
           <h2 style={{ marginBottom: "8px" }}>404 Ticket Not Found</h2>
           <p style={{ color: "var(--color-text-muted)", marginBottom: "20px" }}>
@@ -253,19 +476,48 @@ export const TicketDetailPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Active Attachments Section (FR-27) */}
+            {/* Attachment Management Section (Feature 10) */}
             <div style={{ marginTop: "24px", paddingTop: "20px", borderTop: "1px solid var(--color-border)" }}>
-              <h3 style={{ fontSize: "16px", marginBottom: "12px" }}>
-                Attachments ({ticket.attachments.length})
-              </h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <h3 style={{ fontSize: "16px", margin: 0 }}>
+                  Attachments ({activeAttachments.length} / 5 active)
+                </h3>
+                <button
+                  type="button"
+                  className="tt-btn tt-btn-outline"
+                  disabled={activeAttachments.length >= 5 || uploadingAttachment}
+                  onClick={handleAddAttachmentClick}
+                  style={{ fontSize: "13px", height: "34px" }}
+                  title={activeAttachments.length >= 5 ? "Maximum of 5 active attachments reached" : "Upload new attachment"}
+                >
+                  {uploadingAttachment ? "Uploading..." : "+ Add Attachment"}
+                </button>
+              </div>
 
-              {ticket.attachments.length === 0 ? (
+              {attachmentActionError && (
+                <div
+                  style={{
+                    backgroundColor: "var(--color-error-bg)",
+                    border: "1px solid var(--color-error)",
+                    color: "var(--color-error)",
+                    padding: "8px 12px",
+                    borderRadius: "var(--radius-sm)",
+                    marginBottom: "12px",
+                    fontSize: "13px",
+                  }}
+                >
+                  {attachmentActionError}
+                </div>
+              )}
+
+              {/* Active Attachments */}
+              {activeAttachments.length === 0 && deletedAttachments.length === 0 ? (
                 <p style={{ color: "var(--color-text-muted)", fontSize: "13px", margin: 0 }}>
-                  No initial attachments uploaded with this ticket.
+                  No attachments uploaded for this ticket.
                 </p>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                  {ticket.attachments.map((att) => (
+                  {activeAttachments.map((att) => (
                     <div
                       key={att.id}
                       style={{
@@ -281,12 +533,103 @@ export const TicketDetailPage: React.FC = () => {
                       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                         <span style={{ fontSize: "18px" }}>{att.contentType.includes("pdf") ? "📄" : "🖼️"}</span>
                         <div>
-                          <p style={{ margin: 0, fontWeight: 600, fontSize: "14px" }}>{att.fileName}</p>
-                          <span style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+                          {/* Click filename to Preview (Feature 10) */}
+                          <button
+                            type="button"
+                            onClick={() => setPreviewAttachment(att)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              margin: 0,
+                              fontWeight: 600,
+                              fontSize: "14px",
+                              color: "var(--color-primary-green)",
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                              textAlign: "left",
+                            }}
+                            title="Click to preview attachment"
+                          >
+                            {att.fileName}
+                          </button>
+                          <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
                             {formatFileSize(att.fileSize)} · Uploaded {formatDate(att.createdAt)}
-                          </span>
+                          </div>
                         </div>
                       </div>
+
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        {selectedRequester && (
+                          <a
+                            href={getAttachmentDownloadUrl(att.id, selectedRequester.id)}
+                            download={att.fileName}
+                            className="tt-btn tt-btn-outline"
+                            style={{ fontSize: "12px", height: "30px", padding: "0 10px", textDecoration: "none" }}
+                          >
+                            Download
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          className="tt-btn tt-btn-outline"
+                          onClick={() => {
+                            setRemovingAttachment(att);
+                            setRemovalReasonInput("");
+                          }}
+                          style={{
+                            fontSize: "12px",
+                            height: "30px",
+                            padding: "0 10px",
+                            borderColor: "var(--color-error)",
+                            color: "var(--color-error)",
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Soft-Removed Attachments — Requester Perspective (Bottom of List) */}
+                  {deletedAttachments.map((att) => (
+                    <div
+                      key={att.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "10px 14px",
+                        border: "1px dashed var(--color-border)",
+                        borderRadius: "var(--radius-sm)",
+                        backgroundColor: "#F7FAFC",
+                        color: "var(--color-text-muted)",
+                        opacity: 0.85,
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        {/* Red X Cross Icon */}
+                        <span style={{ fontSize: "16px", color: "var(--color-error)" }} title="Attachment Removed">
+                          ❌
+                        </span>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 500, fontSize: "14px", textDecoration: "line-through", color: "var(--color-text-muted)" }}>
+                            {att.fileName}
+                          </p>
+                          <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+                            {formatFileSize(att.fileSize)} · Removed {att.deletedAt ? formatDate(att.deletedAt) : ""}
+                            {att.removalReason && (
+                              <span style={{ fontStyle: "italic", marginLeft: "6px" }}>
+                                — Reason: &quot;{att.removalReason}&quot;
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <span style={{ fontSize: "12px", fontStyle: "italic", color: "var(--color-text-muted)" }}>
+                        [Removed]
+                      </span>
                     </div>
                   ))}
                 </div>
