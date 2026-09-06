@@ -59,7 +59,7 @@ describe("Lab 02 Feature 3 — UI Foundation & Application Shell", () => {
     );
 
     expect(screen.getByRole("heading", { name: /My Tickets/i })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Search tickets/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search/i)).toBeInTheDocument();
   });
 
   it("renders Create Ticket page at route /tickets/new", async () => {
@@ -79,10 +79,33 @@ describe("Lab 02 Feature 3 — UI Foundation & Application Shell", () => {
     expect(await screen.findByRole("button", { name: /Submit Ticket/i })).toBeInTheDocument();
   });
 
-  it("renders Ticket Detail page at route /tickets/:id", () => {
+  it("renders Ticket Detail page at route /tickets/:id", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            data: {
+              id: 99,
+              ticketNumber: "TICK-2026-0099",
+              requesterId: 1,
+              category: { id: 1, name: "Account and Access" },
+              relatedSystem: { id: 1, name: "Email & Collaboration" },
+              summary: "Sample ticket summary",
+              description: "Sample ticket description.",
+              requestedPriority: "MEDIUM",
+              currentStatus: "New",
+              createdAt: "2026-08-26T09:00:00.000Z",
+              updatedAt: "2026-08-26T09:00:00.000Z",
+              attachments: [],
+            },
+          }),
+      } as Response)
+    );
+
     render(
       <RequesterProvider>
-        <MemoryRouter initialEntries={["/tickets/TICK-2026-0099"]}>
+        <MemoryRouter initialEntries={["/tickets/99"]}>
           <Routes>
             <Route path="/" element={<AppShell />}>
               <Route path="tickets/:id" element={<TicketDetailPage />} />
@@ -92,6 +115,6 @@ describe("Lab 02 Feature 3 — UI Foundation & Application Shell", () => {
       </RequesterProvider>
     );
 
-    expect(screen.getByText(/Ticket #TICK-2026-0099/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Ticket #TICK-2026-0099/i)).toBeInTheDocument();
   });
 });

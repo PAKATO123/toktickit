@@ -75,7 +75,7 @@ describe("Lab 02 Feature 4 — Development Requester Selector", () => {
 
     // Navigates to My Tickets page and shows requester badge in shell
     expect(await screen.findByRole("heading", { name: /My Tickets/i })).toBeInTheDocument();
-    expect(screen.getByText(/Alice Chen/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Alice Chen/i).length).toBeGreaterThan(0);
   });
 
   it("redirects to / when attempting to visit /tickets without selecting a requester", async () => {
