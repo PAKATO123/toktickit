@@ -22,25 +22,69 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// Issue 4 — Category list
-// Add:  GET /api/categories
-//   -> read categories from PostgreSQL via getPrisma().category.findMany(...)
-//   -> return each { id, name } in a predictable (id) order
-//   -> on failure, respond 500 with a safe message (no internal details)
+// Reference Data APIs — GET /api/requesters, GET /api/related-systems, GET /api/categories
 // ---------------------------------------------------------------------------
+
+app.get("/api/requesters", async (_req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const requesters = await prisma.requester.findMany({
+      where: { isActive: true },
+      orderBy: { id: "asc" },
+      select: { id: true, name: true, email: true, department: true },
+    });
+    res.status(200).json({ data: requesters });
+  } catch (error) {
+    console.error("Error fetching requesters:", error);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Unable to load Development Requesters.",
+      },
+    });
+  }
+});
+
+app.get("/api/related-systems", async (_req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const systems = await prisma.relatedSystem.findMany({
+      where: { isActive: true },
+      orderBy: { id: "asc" },
+      select: { id: true, name: true, description: true },
+    });
+    res.status(200).json({ data: systems });
+  } catch (error) {
+    console.error("Error fetching related systems:", error);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Unable to load Related Systems.",
+      },
+    });
+  }
+});
+
 app.get("/api/categories", async (_req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
     const categories = await prisma.category.findMany({
+      where: { isActive: true },
       orderBy: { id: "asc" },
       select: { id: true, name: true },
     });
-    res.status(200).json(categories);
+    res.status(200).json({ data: categories });
   } catch (error) {
     console.error("Error fetching categories:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Unable to load Categories.",
+      },
+    });
   }
 });
+
 
 export default app;
 
