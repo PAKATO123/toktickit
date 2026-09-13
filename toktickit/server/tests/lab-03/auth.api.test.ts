@@ -1,8 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import request from "supertest";
+import bcrypt from "bcryptjs";
 import { app } from "../../src/app.js";
+import { getPrisma } from "../../src/prisma.js";
 
 describe("Lab 03 Feature 2 — Authentication & Password Change API (auth.api.test.ts)", () => {
+  afterAll(async () => {
+    const prisma = getPrisma();
+    const defaultHash = bcrypt.hashSync("Password123!", 10);
+    await prisma.user.update({
+      where: { email: "requester4@toktickit.local" },
+      data: { passwordHash: defaultHash, mustChangePassword: true },
+    });
+  });
   it("rejects login attempt with missing email or password with 400 Bad Request", async () => {
     const res = await request(app).post("/api/auth/login").send({ email: "requester1@toktickit.local" });
     expect(res.status).toBe(400);
@@ -127,5 +137,16 @@ describe("Lab 03 Feature 2 — Authentication & Password Change API (auth.api.te
 
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.user.mustChangePassword).toBe(false);
+  });
+
+  it("blocks user with mustChangePassword = true from accessing restricted application endpoints", async () => {
+    const agent = request.agent(app);
+    await agent
+      .post("/api/auth/login")
+      .send({ email: "requester1@toktickit.local", password: "Password123!" });
+
+    const res = await agent.get("/api/tickets/next-number");
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("PASSWORD_CHANGE_REQUIRED");
   });
 });
