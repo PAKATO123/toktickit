@@ -8,6 +8,7 @@ import RequesterSelectorPage from "./pages/RequesterSelectorPage";
 import MyTicketsPage from "./pages/MyTicketsPage";
 import CreateTicketPage from "./pages/CreateTicketPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
+import StaffQueuePage from "./pages/StaffQueuePage";
 
 export function AppRoutes() {
   return (
@@ -18,6 +19,7 @@ export function AppRoutes() {
           <Route path="tickets" element={<MyTicketsPage />} />
           <Route path="tickets/new" element={<CreateTicketPage />} />
           <Route path="tickets/:id" element={<TicketDetailPage />} />
+          <Route path="staff/queue" element={<StaffQueuePage />} />
         </Route>
       </Route>
     </Routes>

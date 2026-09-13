@@ -184,6 +184,86 @@ export async function requestResolutionIndication(ticketId: number): Promise<Tic
   return json.data;
 }
 
+export interface StaffQueueTicketItem {
+  id: number;
+  ticketNumber: string;
+  summary: string;
+  description: string;
+  currentStatus: string;
+  requestedPriority: string | null;
+  itPriority: string | null;
+  isRequesterResolved: boolean;
+  createdAt: string;
+  category: { id: number; name: string };
+  relatedSystem: { id: number; name: string };
+  requester: { id: number; name: string; email: string };
+  assignedTo: { id: number; name: string; email: string } | null;
+  _count?: {
+    attachments: number;
+    publicComments: number;
+    internalNotes: number;
+  };
+}
+
+export interface StaffQueueParams {
+  search?: string;
+  status?: string;
+  itPriority?: string;
+  assignment?: string;
+  categoryId?: string | number;
+  relatedSystemId?: string | number;
+  sortBy?: string;
+  sortDirection?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface StaffQueueResponse {
+  data: StaffQueueTicketItem[];
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+}
+
+export async function getStaffQueue(params: StaffQueueParams = {}): Promise<StaffQueueResponse> {
+  const query = new URLSearchParams();
+  if (params.search?.trim()) query.append("search", params.search.trim());
+  if (params.status) query.append("status", params.status);
+  if (params.itPriority) query.append("itPriority", params.itPriority);
+  if (params.assignment) query.append("assignment", params.assignment);
+  if (params.categoryId) query.append("categoryId", String(params.categoryId));
+  if (params.relatedSystemId) query.append("relatedSystemId", String(params.relatedSystemId));
+  if (params.sortBy) query.append("sortBy", params.sortBy);
+  if (params.sortDirection) query.append("sortDirection", params.sortDirection);
+  if (params.page) query.append("page", String(params.page));
+  if (params.pageSize) query.append("pageSize", String(params.pageSize));
+
+  const res = await fetch(`${API_BASE_URL}/api/tickets/staff-queue?${query.toString()}`, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to load IT staff queue.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return {
+    data: json.data || [],
+    pagination: json.pagination || json.meta || {
+      total: json.data?.length || 0,
+      page: params.page || 1,
+      pageSize: params.pageSize || 10,
+      totalPages: 1,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    },
+  };
+}
+
 export async function addAttachmentToTicket(ticketId: number, requesterId: number, file: File): Promise<AttachmentMeta> {
   const formData = new FormData();
   formData.append("requesterId", String(requesterId));
