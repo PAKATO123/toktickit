@@ -60,6 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setUser(null);
       setLoading(false);
+      try {
+        sessionStorage.clear();
+      } catch {}
     }
   };
 
