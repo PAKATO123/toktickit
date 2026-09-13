@@ -1,4 +1,5 @@
 import { Requester } from "./types/requester";
+import { SessionUser, LoginCredentials, ChangePasswordPayload } from "./types/auth";
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "";
 
@@ -13,8 +14,80 @@ export interface RelatedSystem {
   description?: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Authentication & Session API Calls
+// ---------------------------------------------------------------------------
+
+export async function loginApi(credentials: LoginCredentials): Promise<{ user: SessionUser }> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(credentials),
+    credentials: "include",
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Invalid credentials.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json;
+}
+
+export async function logoutApi(): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}));
+    throw new Error(json.error?.message || "Logout failed.");
+  }
+}
+
+export async function getMeApi(): Promise<{ user: SessionUser }> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Not authenticated.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json;
+}
+
+export async function changePasswordApi(payload: ChangePasswordPayload): Promise<{ user: SessionUser; message: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/auth/change-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    credentials: "include",
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to change password.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json;
+}
+
+// ---------------------------------------------------------------------------
+// Reference Data & Ticket APIs
+// ---------------------------------------------------------------------------
+
 export async function getRequesters(): Promise<Requester[]> {
-  const res = await fetch(`${API_BASE_URL}/api/requesters`);
+  const res = await fetch(`${API_BASE_URL}/api/requesters`, { credentials: "include" });
   if (!res.ok) {
     throw new Error("Unable to load Development Requesters.");
   }
@@ -23,7 +96,7 @@ export async function getRequesters(): Promise<Requester[]> {
 }
 
 export async function getRelatedSystems(): Promise<RelatedSystem[]> {
-  const res = await fetch(`${API_BASE_URL}/api/related-systems`);
+  const res = await fetch(`${API_BASE_URL}/api/related-systems`, { credentials: "include" });
   if (!res.ok) {
     throw new Error("Unable to load Related Systems.");
   }
@@ -32,7 +105,7 @@ export async function getRelatedSystems(): Promise<RelatedSystem[]> {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const res = await fetch(`${API_BASE_URL}/api/categories`);
+  const res = await fetch(`${API_BASE_URL}/api/categories`, { credentials: "include" });
   if (!res.ok) {
     throw new Error("Unable to load Categories.");
   }
@@ -42,7 +115,7 @@ export async function getCategories(): Promise<Category[]> {
 
 export async function getNextTicketNumber(): Promise<string> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/tickets/next-number`);
+    const res = await fetch(`${API_BASE_URL}/api/tickets/next-number`, { credentials: "include" });
     if (!res.ok) return "TICK-2026-XXXX";
     const json = await res.json();
     return json.data?.nextTicketNumber || "TICK-2026-XXXX";
@@ -78,8 +151,9 @@ export interface TicketDetailData {
   attachments: AttachmentMeta[];
 }
 
-export async function getTicketDetail(id: number | string, requesterId: number): Promise<TicketDetailData> {
-  const res = await fetch(`${API_BASE_URL}/api/tickets/${id}?requesterId=${requesterId}`);
+export async function getTicketDetail(id: number | string, requesterId?: number): Promise<TicketDetailData> {
+  const query = requesterId ? `?requesterId=${requesterId}` : "";
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${id}${query}`, { credentials: "include" });
   const json = await res.json();
   if (!res.ok) {
     const error: any = new Error(json.error?.message || "Unable to load ticket detail.");
@@ -98,6 +172,7 @@ export async function addAttachmentToTicket(ticketId: number, requesterId: numbe
   const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/attachments`, {
     method: "POST",
     body: formData,
+    credentials: "include",
   });
 
   const json = await res.json();
@@ -115,6 +190,7 @@ export async function deleteAttachment(attachmentId: number, requesterId: number
     method: "DELETE",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ requesterId, reason }),
+    credentials: "include",
   });
 
   const json = await res.json();
@@ -127,10 +203,12 @@ export async function deleteAttachment(attachmentId: number, requesterId: number
   return json.data;
 }
 
-export function getAttachmentDownloadUrl(attachmentId: number, requesterId: number): string {
-  return `${API_BASE_URL}/api/attachments/${attachmentId}/download?requesterId=${requesterId}`;
+export function getAttachmentDownloadUrl(attachmentId: number, requesterId?: number): string {
+  const query = requesterId ? `?requesterId=${requesterId}` : "";
+  return `${API_BASE_URL}/api/attachments/${attachmentId}/download${query}`;
 }
 
-export function getAttachmentPreviewUrl(attachmentId: number, requesterId: number): string {
-  return `${API_BASE_URL}/api/attachments/${attachmentId}/preview?requesterId=${requesterId}`;
+export function getAttachmentPreviewUrl(attachmentId: number, requesterId?: number): string {
+  const query = requesterId ? `?requesterId=${requesterId}` : "";
+  return `${API_BASE_URL}/api/attachments/${attachmentId}/preview${query}`;
 }

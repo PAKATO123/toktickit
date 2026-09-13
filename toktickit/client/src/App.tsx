@@ -1,6 +1,7 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { RequesterProvider } from "./context/RequesterContext";
+import { AuthProvider } from "./context/AuthContext";
 import AppShell from "./components/AppShell";
 import RequesterGuard from "./components/RequesterGuard";
 import RequesterSelectorPage from "./pages/RequesterSelectorPage";
@@ -25,10 +26,12 @@ export function AppRoutes() {
 
 export default function App() {
   return (
-    <RequesterProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </RequesterProvider>
+    <AuthProvider>
+      <RequesterProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </RequesterProvider>
+    </AuthProvider>
   );
 }
