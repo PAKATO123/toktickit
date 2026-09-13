@@ -285,43 +285,27 @@ app.get("/api/categories", async (_req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// My Tickets API — GET /api/tickets (F-06)
+// My Tickets API — GET /api/tickets (F-06 & Lab 3 F-03)
 // ---------------------------------------------------------------------------
-app.get("/api/tickets", async (req: Request, res: Response) => {
+app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
+    const sessionUser = req.session.user!;
 
-    // 1. Validate requesterId (Required parameter)
-    const requesterIdRaw = req.query.requesterId;
-    if (!requesterIdRaw) {
-      return res.status(400).json({
-        error: {
-          code: "INVALID_QUERY",
-          message: "requesterId query parameter is required.",
-        },
-      });
+    // Derive requesterId from authenticated session if Requester role
+    let requesterId: number;
+    if (sessionUser.role === "REQUESTER") {
+      requesterId = sessionUser.id;
+    } else {
+      const requesterIdRaw = req.query.requesterId;
+      requesterId = requesterIdRaw ? parseInt(String(requesterIdRaw), 10) : sessionUser.id;
     }
 
-    const requesterId = parseInt(String(requesterIdRaw), 10);
     if (isNaN(requesterId)) {
       return res.status(400).json({
         error: {
           code: "INVALID_QUERY",
           message: "requesterId must be a valid integer.",
-        },
-      });
-    }
-
-    // Check requester existence & active status in DB
-    const requester = await prisma.requester.findUnique({
-      where: { id: requesterId },
-    });
-
-    if (!requester || !requester.isActive) {
-      return res.status(404).json({
-        error: {
-          code: "REQUESTER_NOT_FOUND",
-          message: "The selected Development Requester could not be found.",
         },
       });
     }
@@ -559,11 +543,19 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// Ticket Detail API — GET /api/tickets/:id (F-09)
+// IT Staff Ticket Queue Stub — GET /api/tickets/staff-queue (F-04)
 // ---------------------------------------------------------------------------
-app.get("/api/tickets/:id", async (req: Request, res: Response) => {
+app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (_req: Request, res: Response) => {
+  return res.status(200).json({ data: [] });
+});
+
+// ---------------------------------------------------------------------------
+// Ticket Detail API — GET /api/tickets/:id (F-09 & Lab 3 F-03)
+// ---------------------------------------------------------------------------
+app.get("/api/tickets/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
+    const sessionUser = req.session.user!;
 
     // 1. Validate ID param
     const ticketId = parseInt(req.params.id, 10);
@@ -576,34 +568,14 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
       });
     }
 
-    // 2. Validate requesterId query param
-    const requesterIdRaw = req.query.requesterId;
-    if (!requesterIdRaw) {
-      return res.status(400).json({
-        error: {
-          code: "INVALID_QUERY",
-          message: "requesterId query parameter is required.",
-        },
-      });
-    }
-
-    const requesterId = parseInt(String(requesterIdRaw), 10);
-    if (isNaN(requesterId)) {
-      return res.status(400).json({
-        error: {
-          code: "INVALID_QUERY",
-          message: "requesterId must be a valid integer.",
-        },
-      });
-    }
-
-    // 3. Query Ticket with relations and active/soft-deleted attachments
+    // 2. Query Ticket with relations and active/soft-deleted attachments
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
         attachments: {
           select: {
             id: true,
@@ -629,8 +601,8 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
       });
     }
 
-    // 4. Ownership Validation (BR-10, FR-24, AC-38)
-    if (ticket.requesterId !== requesterId) {
+    // 3. Ownership Validation for Requesters (BR-06, AC-04)
+    if (sessionUser.role === "REQUESTER" && ticket.requesterId !== sessionUser.id) {
       return res.status(403).json({
         error: {
           code: "FORBIDDEN",
@@ -652,14 +624,66 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// Ticket Creation API — POST /api/tickets (F-05)
+// Requester Resolution Request API — PATCH /api/tickets/:id/resolve-indication
 // ---------------------------------------------------------------------------
-app.post("/api/tickets", upload.array("attachments", 10), async (req: Request, res: Response) => {
+app.patch("/api/tickets/:id/resolve-indication", requireAuth, requireRole("REQUESTER"), async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+    const ticketId = parseInt(req.params.id, 10);
 
-    // 1. Parse Fields
-    const requesterId = parseInt(req.body.requesterId, 10);
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    if (ticket.requesterId !== sessionUser.id) {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: "You do not have permission to modify this ticket." },
+      });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        isRequesterResolved: true,
+        currentStatus: "Pending Verification",
+      },
+      include: {
+        category: { select: { id: true, name: true } },
+        relatedSystem: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return res.status(200).json({ data: updated });
+  } catch (error) {
+    console.error("Error setting resolve indication:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to update resolution indication." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Ticket Creation API — POST /api/tickets (F-05 & Lab 3 F-03)
+// ---------------------------------------------------------------------------
+app.post("/api/tickets", requireAuth, upload.array("attachments", 10), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+
+    // 1. Parse Fields & Bind Authenticated Requester Identity (FR-07, BR-03)
+    const requesterId = sessionUser.id;
     const categoryId = parseInt(req.body.categoryId, 10);
     const relatedSystemId = parseInt(req.body.relatedSystemId, 10);
     const summary = req.body.summary ? String(req.body.summary).trim() : "";
@@ -716,7 +740,7 @@ app.post("/api/tickets", upload.array("attachments", 10), async (req: Request, r
 
     // 4. Validate active entity existence in DB
     const [requester, category, relatedSystem] = await Promise.all([
-      prisma.requester.findUnique({ where: { id: requesterId } }),
+      prisma.user.findUnique({ where: { id: requesterId } }),
       prisma.category.findUnique({ where: { id: categoryId } }),
       prisma.relatedSystem.findUnique({ where: { id: relatedSystemId } }),
     ]);
@@ -838,11 +862,12 @@ app.post("/api/tickets", upload.array("attachments", 10), async (req: Request, r
 // ---------------------------------------------------------------------------
 // Add Attachment to Existing Ticket — POST /api/tickets/:id/attachments (F-10)
 // ---------------------------------------------------------------------------
-app.post("/api/tickets/:id/attachments", upload.single("file"), async (req: Request, res: Response) => {
+app.post("/api/tickets/:id/attachments", requireAuth, upload.single("file"), async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
+    const sessionUser = req.session.user!;
     const ticketId = parseInt(req.params.id, 10);
-    const requesterId = parseInt(String(req.body.requesterId || req.query.requesterId), 10);
+    const requesterId = sessionUser.role === "REQUESTER" ? sessionUser.id : parseInt(String(req.body.requesterId || req.query.requesterId), 10);
 
     if (isNaN(ticketId) || isNaN(requesterId)) {
       return res.status(400).json({
@@ -1077,6 +1102,20 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
       error: { code: "INTERNAL_ERROR", message: "Unable to remove attachment." },
     });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Internal Notes API Stub — POST /api/tickets/:id/notes (F-07)
+// ---------------------------------------------------------------------------
+app.post("/api/tickets/:id/notes", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (_req: Request, res: Response) => {
+  return res.status(201).json({ message: "Note added stub" });
+});
+
+// ---------------------------------------------------------------------------
+// User Management API Stub — GET /api/users (F-08)
+// ---------------------------------------------------------------------------
+app.get("/api/users", requireAuth, requireRole("ADMINISTRATOR"), async (_req: Request, res: Response) => {
+  return res.status(200).json({ data: [] });
 });
 
 // ---------------------------------------------------------------------------
