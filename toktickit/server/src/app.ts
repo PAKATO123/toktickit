@@ -424,7 +424,7 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
       include: {
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
-        requester: { select: { id: true, name: true, email: true, department: true } },
+        requester: { select: { id: true, name: true, email: true } },
         attachments: {
           select: {
             id: true,
