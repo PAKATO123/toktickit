@@ -363,7 +363,7 @@ export const StaffQueuePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Secondary Filters (Category & Related System) */}
+        {/* Secondary Filters (Category & Related System & Permanent Clear Filters) */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
           <div className="tt-form-group" style={{ marginBottom: 0 }}>
             <label className="tt-label" htmlFor="category-filter-select">Category</label>
@@ -403,27 +403,33 @@ export const StaffQueuePage: React.FC = () => {
             </select>
           </div>
 
-          {/* Reset Filters Action Button */}
-          {hasActiveFilters && (
-            <div style={{ display: "flex", alignItems: "flex-end" }}>
-              <button
-                type="button"
-                className="tt-btn tt-btn-outline"
-                style={{ height: "38px", width: "100%", fontSize: "13px" }}
-                onClick={() => {
-                  setSearch("");
-                  setStatusFilter("");
-                  setPriorityFilter("");
-                  setAssignmentFilter("all");
-                  setCategoryFilter("");
-                  setSystemFilter("");
-                  setPage(1);
-                }}
-              >
-                Clear All Filters
-              </button>
-            </div>
-          )}
+          {/* Permanent Reset Filters Action Button */}
+          <div className="tt-form-group" style={{ marginBottom: 0, display: "flex", alignItems: "flex-end" }}>
+            <button
+              type="button"
+              className="tt-btn tt-btn-outline"
+              disabled={!hasActiveFilters}
+              style={{
+                height: "38px",
+                width: "100%",
+                fontSize: "13px",
+                opacity: hasActiveFilters ? 1 : 0.45,
+                cursor: hasActiveFilters ? "pointer" : "not-allowed",
+                borderColor: hasActiveFilters ? "var(--color-primary)" : "#CBD5E0",
+              }}
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("");
+                setPriorityFilter("");
+                setAssignmentFilter("all");
+                setCategoryFilter("");
+                setSystemFilter("");
+                setPage(1);
+              }}
+            >
+              Clear All Filters
+            </button>
+          </div>
         </div>
       </div>
 
@@ -454,10 +460,10 @@ export const StaffQueuePage: React.FC = () => {
         /* Staff Queue Table View */
         <div className="tt-card" style={{ padding: 0, overflow: "hidden" }}>
           <div style={{ overflowX: "auto" }}>
-            <table className="tt-table" data-testid="staff-queue-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table className="tt-table" data-testid="staff-queue-table" style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ backgroundColor: "#F7FAFC", borderBottom: "1px solid var(--color-border)" }}>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "24%" }}>
                     <button
                       type="button"
                       data-testid="sort-ticketNumber"
@@ -467,34 +473,34 @@ export const StaffQueuePage: React.FC = () => {
                       Ticket # {sortBy === "ticketNumber" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </button>
                   </th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Requester</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Category / System</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", width: "15%" }}>Requester</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", width: "17%" }}>Category / System</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "11%" }}>
                     <button
                       type="button"
                       data-testid="sort-itPriority"
-                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", whiteSpace: "nowrap" }}
                       onClick={() => handleSort("itPriority")}
                     >
                       IT Priority {sortBy === "itPriority" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </button>
                   </th>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "15%" }}>
                     <button
                       type="button"
                       data-testid="sort-currentStatus"
-                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", whiteSpace: "nowrap" }}
                       onClick={() => handleSort("currentStatus")}
                     >
                       Status {sortBy === "currentStatus" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </button>
                   </th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Assignee</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", width: "13%" }}>Assignee</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "10%" }}>
                     <button
                       type="button"
                       data-testid="sort-createdAt"
-                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", whiteSpace: "nowrap" }}
                       onClick={() => handleSort("createdAt")}
                     >
                       Submitted {sortBy === "createdAt" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
@@ -509,32 +515,40 @@ export const StaffQueuePage: React.FC = () => {
                     data-testid={`ticket-row-${ticket.id}`}
                     style={{ borderBottom: "1px solid var(--color-border)", transition: "background-color 0.15s" }}
                   >
-                    <td style={{ padding: "12px 16px" }}>
+                    <td style={{ padding: "12px 16px", overflow: "hidden", textOverflow: "ellipsis" }}>
                       <Link
                         to={`/tickets/${ticket.id}`}
                         style={{ fontWeight: 600, textDecoration: "none", color: "var(--color-primary)" }}
                       >
                         {ticket.ticketNumber}
                       </Link>
-                      <div style={{ fontSize: "13px", color: "var(--color-text-main)", marginTop: "2px", fontWeight: 500 }}>
+                      <div style={{ fontSize: "13px", color: "var(--color-text-main)", marginTop: "2px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {ticket.summary}
                       </div>
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <div style={{ fontWeight: 500, fontSize: "14px" }}>{ticket.requester?.name || "N/A"}</div>
-                      <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>{ticket.requester?.email}</div>
+                      <div style={{ fontWeight: 500, fontSize: "14px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ticket.requester?.name || "N/A"}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--color-text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ticket.requester?.email}
+                      </div>
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <div style={{ fontSize: "13px", fontWeight: 500 }}>{ticket.category.name}</div>
-                      <div style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>{ticket.relatedSystem.name}</div>
+                      <div style={{ fontSize: "13px", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ticket.category.name}
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--color-text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {ticket.relatedSystem.name}
+                      </div>
                     </td>
-                    <td style={{ padding: "12px 16px" }}>
+                    <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
                       {renderPriorityBadge(ticket.itPriority)}
                     </td>
-                    <td style={{ padding: "12px 16px" }}>
+                    <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
                       {renderStatusBadge(ticket.currentStatus, ticket.isRequesterResolved)}
                     </td>
-                    <td style={{ padding: "12px 16px" }}>
+                    <td style={{ padding: "12px 16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {ticket.assignedTo ? (
                         <span style={{ fontSize: "13px", fontWeight: 500, color: "#2B6CB0" }}>
                           👤 {ticket.assignedTo.name}
@@ -545,7 +559,7 @@ export const StaffQueuePage: React.FC = () => {
                         </span>
                       )}
                     </td>
-                    <td style={{ padding: "12px 16px", fontSize: "13px", color: "var(--color-text-muted)" }}>
+                    <td style={{ padding: "12px 16px", fontSize: "13px", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
                       {formatDate(ticket.createdAt)}
                     </td>
                   </tr>
@@ -568,14 +582,14 @@ export const StaffQueuePage: React.FC = () => {
                 gap: "12px",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "13px", color: "var(--color-text-muted)" }}>
-                <span>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "13px", color: "var(--color-text-muted)", flexWrap: "nowrap" }}>
+                <span style={{ whiteSpace: "nowrap" }}>
                   Showing {pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1} to{" "}
                   {Math.min(pagination.page * pagination.pageSize, pagination.total)} of {pagination.total} tickets
                 </span>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <label htmlFor="staff-page-size-select" style={{ fontSize: "12px" }}>Per page:</label>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
+                  <label htmlFor="staff-page-size-select" style={{ fontSize: "12px", whiteSpace: "nowrap", display: "inline-block", margin: 0 }}>Per page:</label>
                   <select
                     id="staff-page-size-select"
                     className="tt-select"
@@ -585,7 +599,7 @@ export const StaffQueuePage: React.FC = () => {
                       setPageSize(Number(e.target.value));
                       setPage(1);
                     }}
-                    style={{ padding: "4px 8px", fontSize: "12px", height: "30px" }}
+                    style={{ padding: "4px 8px", fontSize: "12px", height: "30px", width: "auto", display: "inline-block" }}
                   >
                     <option value={10}>10</option>
                     <option value={25}>25</option>

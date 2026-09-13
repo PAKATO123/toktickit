@@ -29,10 +29,10 @@ const USERS = [
   { email: "requester5@toktickit.local", name: "Eve Inactive", role: "REQUESTER" as const, isActive: false, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
 
   // IT Staff (3 active, 1 inactive)
-  { email: "staff1@toktickit.local", name: "Jane Staff", role: "IT_STAFF" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "staff2@toktickit.local", name: "Mark Tech", role: "IT_STAFF" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "staff3@toktickit.local", name: "Sarah Support", role: "IT_STAFF" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "staff4@toktickit.local", name: "Tom Inactive Staff", role: "IT_STAFF" as const, isActive: false, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "staff1@toktickit.local", name: "Jane Staff", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "staff2@toktickit.local", name: "Mark Tech", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "staff3@toktickit.local", name: "Sarah Support", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "staff4@toktickit.local", name: "Tom Inactive Staff", role: "IT_STAFF" as const, isActive: false, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
 
   // Administrator (1 active)
   { email: "admin@toktickit.local", name: "System Admin", role: "ADMINISTRATOR" as const, isActive: true, mustChangePassword: false, passwordHash: ADMIN_PASSWORD_HASH },
