@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
+import { useAuth } from "../context/AuthContext";
 import { getCategories, getRelatedSystems, Category, RelatedSystem, API_BASE_URL } from "../api";
 
 export interface TicketListItem {
@@ -26,6 +27,7 @@ export interface PaginationMeta {
 export const MyTicketsPage: React.FC = () => {
   const navigate = useNavigate();
   const { selectedRequester } = useRequester();
+  const { user } = useAuth();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);
@@ -78,14 +80,15 @@ export const MyTicketsPage: React.FC = () => {
 
   // Fetch Tickets from API
   const fetchTickets = useCallback(async () => {
-    if (!selectedRequester) return;
+    const currentRequesterId = selectedRequester?.id || user?.id;
+    if (!currentRequesterId) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams();
-      params.append("requesterId", String(selectedRequester.id));
+      params.append("requesterId", String(currentRequesterId));
       if (debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
       if (statusFilter) params.append("status", statusFilter);
       if (priorityFilter) params.append("priority", priorityFilter);
@@ -96,7 +99,7 @@ export const MyTicketsPage: React.FC = () => {
       params.append("page", String(page));
       params.append("pageSize", String(pageSize));
 
-      const res = await fetch(`${API_BASE_URL}/api/tickets?${params.toString()}`);
+      const res = await fetch(`${API_BASE_URL}/api/tickets?${params.toString()}`, { credentials: "include" });
       const json = await res.json();
 
       if (!res.ok) {
@@ -113,6 +116,7 @@ export const MyTicketsPage: React.FC = () => {
     }
   }, [
     selectedRequester,
+    user,
     debouncedSearch,
     statusFilter,
     priorityFilter,

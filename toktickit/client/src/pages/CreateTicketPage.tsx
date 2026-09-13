@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
+import { useAuth } from "../context/AuthContext";
 import { getCategories, getRelatedSystems, getNextTicketNumber, Category, RelatedSystem, API_BASE_URL } from "../api";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
@@ -10,6 +11,7 @@ const MAX_FILES_COUNT = 5;
 export const CreateTicketPage: React.FC = () => {
   const navigate = useNavigate();
   const { selectedRequester, setIsFormDirty } = useRequester();
+  const { user } = useAuth();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);
@@ -146,8 +148,9 @@ export const CreateTicketPage: React.FC = () => {
     setSubmitError(null);
     setFileError(null);
 
-    if (!selectedRequester) {
-      setSubmitError("No Development Requester selected. Please select a requester first.");
+    const currentRequesterId = selectedRequester?.id || user?.id;
+    if (!currentRequesterId) {
+      setSubmitError("Please sign in to submit a ticket.");
       return;
     }
 
@@ -159,7 +162,7 @@ export const CreateTicketPage: React.FC = () => {
 
     try {
       const formData = new FormData();
-      formData.append("requesterId", String(selectedRequester.id));
+      formData.append("requesterId", String(currentRequesterId));
       formData.append("categoryId", categoryId);
       formData.append("relatedSystemId", relatedSystemId);
       formData.append("summary", summary.trim());
@@ -175,6 +178,7 @@ export const CreateTicketPage: React.FC = () => {
       const response = await fetch(`${API_BASE_URL}/api/tickets`, {
         method: "POST",
         body: formData,
+        credentials: "include",
       });
 
       const json = await response.json();
