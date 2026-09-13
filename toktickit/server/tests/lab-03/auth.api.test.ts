@@ -95,7 +95,7 @@ describe("Lab 03 Feature 2 — Authentication & Password Change API (auth.api.te
     const agent = request.agent(app);
     await agent
       .post("/api/auth/login")
-      .send({ email: "requester2@toktickit.local", password: "Password123!" });
+      .send({ email: "requester3@toktickit.local", password: "Password123!" });
 
     const res = await agent.post("/api/auth/change-password").send({
       currentPassword: "Password123!",
@@ -110,7 +110,7 @@ describe("Lab 03 Feature 2 — Authentication & Password Change API (auth.api.te
     const agent = request.agent(app);
     await agent
       .post("/api/auth/login")
-      .send({ email: "requester2@toktickit.local", password: "Password123!" });
+      .send({ email: "requester4@toktickit.local", password: "Password123!" });
 
     const res = await agent.post("/api/auth/change-password").send({
       currentPassword: "Password123!",
@@ -123,7 +123,7 @@ describe("Lab 03 Feature 2 — Authentication & Password Change API (auth.api.te
     // Verify login with new password
     const loginRes = await request(app)
       .post("/api/auth/login")
-      .send({ email: "requester2@toktickit.local", password: "BrandNewSecurePass123!" });
+      .send({ email: "requester4@toktickit.local", password: "BrandNewSecurePass123!" });
 
     expect(loginRes.status).toBe(200);
     expect(loginRes.body.user.mustChangePassword).toBe(false);

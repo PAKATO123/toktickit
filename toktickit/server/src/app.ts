@@ -103,8 +103,14 @@ app.post("/api/auth/login", async (req: Request, res: Response) => {
 
     req.session.user = sessionUser;
 
-    return res.status(200).json({
-      user: sessionUser,
+    return req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Session error." } });
+      }
+      return res.status(200).json({
+        user: sessionUser,
+      });
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -183,10 +189,13 @@ app.post("/api/auth/change-password", requireAuth, async (req: Request, res: Res
       mustChangePassword: false,
     };
 
-    return res.status(200).json({
-      message: "Password changed successfully",
-      mustChangePassword: false,
-      user: req.session.user,
+    return req.session.save((err) => {
+      if (err) console.error("Session save error:", err);
+      return res.status(200).json({
+        message: "Password changed successfully",
+        mustChangePassword: false,
+        user: req.session.user,
+      });
     });
   } catch (error) {
     console.error("Change password error:", error);
