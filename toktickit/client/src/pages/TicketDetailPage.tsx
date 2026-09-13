@@ -8,6 +8,7 @@ import {
   deleteAttachment,
   getAttachmentDownloadUrl,
   getAttachmentPreviewUrl,
+  requestResolutionIndication,
   TicketDetailData,
   AttachmentMeta,
 } from "../api";
@@ -36,6 +37,8 @@ export const TicketDetailPage: React.FC = () => {
   const [removingAttachment, setRemovingAttachment] = useState<AttachmentMeta | null>(null);
   const [removalReasonInput, setRemovalReasonInput] = useState<string>("");
   const [submittingRemoval, setSubmittingRemoval] = useState<boolean>(false);
+  const [showResolveModal, setShowResolveModal] = useState<boolean>(false);
+  const [submittingResolution, setSubmittingResolution] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -156,6 +159,23 @@ export const TicketDetailPage: React.FC = () => {
     }
   };
 
+  const handleConfirmResolution = async () => {
+    if (!ticket) return;
+    setSubmittingResolution(true);
+    try {
+      const updated = await requestResolutionIndication(ticket.id);
+      setTicket(updated);
+      setShowResolveModal(false);
+      setToastMessage("Resolution request submitted. IT support has been notified to verify.");
+    } catch (err: any) {
+      console.error("Error requesting resolution:", err);
+      setAttachmentActionError(err.message || "Failed to submit resolution request.");
+      setShowResolveModal(false);
+    } finally {
+      setSubmittingResolution(false);
+    }
+  };
+
   const activeAttachments = ticket?.attachments.filter((a) => !a.isDeleted) || [];
   const deletedAttachments = ticket?.attachments.filter((a) => a.isDeleted) || [];
 
@@ -171,10 +191,20 @@ export const TicketDetailPage: React.FC = () => {
     return <span className="tt-badge">{priority}</span>;
   };
 
-  const renderStatusBadge = (status: string) => {
+  const renderStatusBadge = (status: string, isRequesterResolved?: boolean) => {
     const lower = status.toLowerCase();
+    if (isRequesterResolved || lower === "pending verification") {
+      return (
+        <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>
+          Pending Verification
+        </span>
+      );
+    }
     if (lower === "new") return <span className="tt-badge tt-badge-new">New</span>;
+    if (lower === "open") return <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED" }}>Open</span>;
     if (lower === "in progress") return <span className="tt-badge tt-badge-medium">In Progress</span>;
+    if (lower === "waiting for requester") return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E" }}>Waiting for Requester</span>;
+    if (lower === "reopened") return <span className="tt-badge" style={{ backgroundColor: "#FEE2E2", color: "#991B1B", border: "1px solid #F87171" }}>Reopened</span>;
     if (lower === "resolved") {
       return (
         <span className="tt-badge" style={{ backgroundColor: "#E6FFFA", color: "#234E52", border: "1px solid #319795" }}>
@@ -422,14 +452,40 @@ export const TicketDetailPage: React.FC = () => {
       ) : ticket ? (
         /* Read-Only Ticket Detail Screen (FR-23, AC-37) */
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "16px" }}>
             <div>
               <h1 style={{ marginBottom: "4px" }}>Ticket #{ticket.ticketNumber}</h1>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                {renderStatusBadge(ticket.currentStatus)}
+                {renderStatusBadge(ticket.currentStatus, ticket.isRequesterResolved)}
                 {renderPriorityBadge(ticket.requestedPriority)}
               </div>
             </div>
+
+            {/* Resolution Indication Button for Ticket Owner (F-06) */}
+            {ticket.requesterId === (user?.id || selectedRequester?.id) && (
+              <div>
+                {ticket.isRequesterResolved || ticket.currentStatus === "Pending Verification" ? (
+                  <button
+                    type="button"
+                    className="tt-btn tt-btn-outline"
+                    disabled
+                    data-testid="resolution-requested-badge"
+                    style={{ backgroundColor: "#F7FAFC", color: "#4A5568", borderColor: "#CBD5E0", cursor: "not-allowed" }}
+                  >
+                    Resolution Requested ✓
+                  </button>
+                ) : !["Closed", "Resolved", "Cancelled"].includes(ticket.currentStatus) && (
+                  <button
+                    type="button"
+                    className="tt-btn tt-btn-primary"
+                    data-testid="request-resolution-button"
+                    onClick={() => setShowResolveModal(true)}
+                  >
+                    I consider this issue resolved
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="tt-card">
@@ -660,7 +716,53 @@ export const TicketDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
-      ) : null}
+      {/* Resolution Indication Confirmation Modal */}
+      {showResolveModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            zIndex: 1100,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          data-testid="resolution-confirmation-modal"
+        >
+          <div className="tt-card" style={{ maxWidth: "460px", width: "100%", margin: 0 }}>
+            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Request Ticket Resolution</h3>
+            <p style={{ color: "var(--color-text-muted)", fontSize: "14px", marginBottom: "20px", lineHeight: "1.5" }}>
+              Are you sure you consider this issue resolved? Your IT support team will be notified to verify and close the ticket.
+            </p>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+              <button
+                type="button"
+                className="tt-btn tt-btn-outline"
+                data-testid="cancel-resolution-button"
+                onClick={() => setShowResolveModal(false)}
+                disabled={submittingResolution}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="tt-btn tt-btn-primary"
+                data-testid="confirm-resolution-button"
+                onClick={handleConfirmResolution}
+                disabled={submittingResolution}
+              >
+                {submittingResolution ? "Submitting..." : "Yes, Mark as Resolved"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

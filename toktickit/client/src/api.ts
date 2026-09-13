@@ -145,7 +145,10 @@ export interface TicketDetailData {
   summary: string;
   description: string;
   requestedPriority: string | null;
+  itPriority?: string | null;
   currentStatus: string;
+  isRequesterResolved?: boolean;
+  assignedTo?: { id: number; name: string; email: string } | null;
   createdAt: string;
   updatedAt: string;
   attachments: AttachmentMeta[];
@@ -157,6 +160,23 @@ export async function getTicketDetail(id: number | string, requesterId?: number)
   const json = await res.json();
   if (!res.ok) {
     const error: any = new Error(json.error?.message || "Unable to load ticket detail.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function requestResolutionIndication(ticketId: number): Promise<TicketDetailData> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/resolve-indication`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to request resolution.");
     error.status = res.status;
     error.code = json.error?.code;
     throw error;

@@ -200,8 +200,20 @@ export const MyTicketsPage: React.FC = () => {
     if (lower === "new") {
       return <span className="tt-badge tt-badge-new">New</span>;
     }
+    if (lower === "open") {
+      return <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED" }}>Open</span>;
+    }
     if (lower === "in progress") {
       return <span className="tt-badge tt-badge-medium">In Progress</span>;
+    }
+    if (lower === "waiting for requester") {
+      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E" }}>Waiting for Requester</span>;
+    }
+    if (lower === "pending verification") {
+      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>Pending Verification</span>;
+    }
+    if (lower === "reopened") {
+      return <span className="tt-badge" style={{ backgroundColor: "#FEE2E2", color: "#991B1B", border: "1px solid #F87171" }}>Reopened</span>;
     }
     if (lower === "resolved") {
       return (
@@ -222,6 +234,9 @@ export const MyTicketsPage: React.FC = () => {
           Closed
         </span>
       );
+    }
+    if (lower === "cancelled") {
+      return <span className="tt-badge" style={{ backgroundColor: "#E2E8F0", color: "#718096", border: "1px solid #A0AEC0" }}>Cancelled</span>;
     }
     return <span className="tt-badge">{status}</span>;
   };
