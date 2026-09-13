@@ -1,15 +1,24 @@
-import { describe, it, expect, afterAll } from "vitest";
+import { describe, it, expect, afterAll, beforeEach } from "vitest";
 import request from "supertest";
 import bcrypt from "bcryptjs";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
 
 describe("Lab 03 Feature 2 — Authentication & Password Change API (auth.api.test.ts)", () => {
+  beforeEach(async () => {
+    const prisma = getPrisma();
+    const defaultHash = bcrypt.hashSync("Password123!", 10);
+    await prisma.user.updateMany({
+      where: { email: { in: ["requester1@toktickit.local", "requester4@toktickit.local"] } },
+      data: { passwordHash: defaultHash, mustChangePassword: true },
+    });
+  });
+
   afterAll(async () => {
     const prisma = getPrisma();
     const defaultHash = bcrypt.hashSync("Password123!", 10);
-    await prisma.user.update({
-      where: { email: "requester4@toktickit.local" },
+    await prisma.user.updateMany({
+      where: { email: { in: ["requester1@toktickit.local", "requester4@toktickit.local"] } },
       data: { passwordHash: defaultHash, mustChangePassword: true },
     });
   });

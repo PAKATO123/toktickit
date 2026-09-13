@@ -713,58 +713,60 @@ export const TicketDetailPage: React.FC = () => {
                   ))}
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-      {/* Resolution Indication Confirmation Modal */}
-      {showResolveModal && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            zIndex: 1100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "20px",
-          }}
-          data-testid="resolution-confirmation-modal"
-        >
-          <div className="tt-card" style={{ maxWidth: "460px", width: "100%", margin: 0 }}>
-            <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Request Ticket Resolution</h3>
-            <p style={{ color: "var(--color-text-muted)", fontSize: "14px", marginBottom: "20px", lineHeight: "1.5" }}>
-              Are you sure you consider this issue resolved? Your IT support team will be notified to verify and close the ticket.
-            </p>
+              {/* Resolution Indication Confirmation Modal */}
+              {showResolveModal && (
+                <div
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    zIndex: 1100,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "20px",
+                  }}
+                  data-testid="resolution-confirmation-modal"
+                >
+                  <div className="tt-card" style={{ maxWidth: "460px", width: "100%", margin: 0 }}>
+                    <h3 style={{ marginTop: 0, marginBottom: "10px" }}>Request Ticket Resolution</h3>
+                    <p style={{ color: "var(--color-text-muted)", fontSize: "14px", marginBottom: "20px", lineHeight: "1.5" }}>
+                      Are you sure you consider this issue resolved? Your IT support team will be notified to verify and close the ticket.
+                    </p>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
-              <button
-                type="button"
-                className="tt-btn tt-btn-outline"
-                data-testid="cancel-resolution-button"
-                onClick={() => setShowResolveModal(false)}
-                disabled={submittingResolution}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="tt-btn tt-btn-primary"
-                data-testid="confirm-resolution-button"
-                onClick={handleConfirmResolution}
-                disabled={submittingResolution}
-              >
-                {submittingResolution ? "Submitting..." : "Yes, Mark as Resolved"}
-              </button>
+                    <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px" }}>
+                      <button
+                        type="button"
+                        className="tt-btn tt-btn-outline"
+                        data-testid="cancel-resolution-button"
+                        onClick={() => setShowResolveModal(false)}
+                        disabled={submittingResolution}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="tt-btn tt-btn-primary"
+                        data-testid="confirm-resolution-button"
+                        onClick={handleConfirmResolution}
+                        disabled={submittingResolution}
+                      >
+                        {submittingResolution ? "Submitting..." : "Yes, Mark as Resolved"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };
 
 export default TicketDetailPage;
+
