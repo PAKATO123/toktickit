@@ -1116,6 +1116,19 @@ app.patch("/api/tickets/:id/resolve-indication", requireAuth, requireRole("REQUE
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
         assignedTo: { select: { id: true, name: true, email: true } },
+        attachments: {
+          select: {
+            id: true,
+            fileName: true,
+            contentType: true,
+            fileSize: true,
+            isDeleted: true,
+            removalReason: true,
+            deletedAt: true,
+            createdAt: true,
+          },
+          orderBy: [{ isDeleted: "asc" }, { createdAt: "asc" }],
+        },
       },
     });
 

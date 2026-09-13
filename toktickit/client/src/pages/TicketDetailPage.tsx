@@ -176,8 +176,8 @@ export const TicketDetailPage: React.FC = () => {
     }
   };
 
-  const activeAttachments = ticket?.attachments.filter((a) => !a.isDeleted) || [];
-  const deletedAttachments = ticket?.attachments.filter((a) => a.isDeleted) || [];
+  const activeAttachments = ticket?.attachments?.filter((a) => !a.isDeleted) || [];
+  const deletedAttachments = ticket?.attachments?.filter((a) => a.isDeleted) || [];
 
   const renderPriorityBadge = (priority: string | null) => {
     if (!priority) {
@@ -216,6 +216,13 @@ export const TicketDetailPage: React.FC = () => {
       return (
         <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0" }}>
           Closed
+        </span>
+      );
+    }
+    if (lower === "cancelled") {
+      return (
+        <span className="tt-badge" style={{ backgroundColor: "#E2E8F0", color: "#718096", border: "1px solid #A0AEC0" }}>
+          Cancelled
         </span>
       );
     }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 export interface LoginFormProps {
@@ -6,6 +7,7 @@ export interface LoginFormProps {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+  const navigate = useNavigate();
   const { login, error: globalError, clearError } = useAuth();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -25,7 +27,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     setIsSubmitting(true);
     try {
       await login({ email: email.trim(), password });
-      if (onSuccess) onSuccess();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate("/tickets");
+      }
     } catch (err: any) {
       setLocalError(err.message || "Invalid email address or password.");
     } finally {

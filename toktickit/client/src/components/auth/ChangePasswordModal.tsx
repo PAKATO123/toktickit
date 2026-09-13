@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 export interface ChangePasswordModalProps {
@@ -6,7 +7,8 @@ export interface ChangePasswordModalProps {
 }
 
 export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onSuccess }) => {
-  const { changePassword } = useAuth();
+  const navigate = useNavigate();
+  const { user, changePassword } = useAuth();
   const [currentPassword, setCurrentPassword] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -32,6 +34,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onSucc
     try {
       await changePassword({ currentPassword, newPassword });
       if (onSuccess) onSuccess();
+      if (window.location.pathname === "/") {
+        if (user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR") {
+          navigate("/staff/queue");
+        } else {
+          navigate("/tickets");
+        }
+      }
     } catch (err: any) {
       setError(err.message || "Current password is incorrect or new password does not meet requirements.");
     } finally {

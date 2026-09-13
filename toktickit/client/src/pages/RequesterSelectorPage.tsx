@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
+import { useAuth } from "../context/AuthContext";
 import { getRequesters } from "../api";
 import { Requester } from "../types/requester";
 
 export const RequesterSelectorPage: React.FC = () => {
   const navigate = useNavigate();
   const { selectedRequester, setSelectedRequester } = useRequester();
+  const { user } = useAuth();
 
   const [requesters, setRequesters] = useState<Requester[]>([]);
   const [selectedId, setSelectedId] = useState<string>(
@@ -16,6 +18,15 @@ export const RequesterSelectorPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (user) {
+      if (user.role === "IT_STAFF" || user.role === "ADMINISTRATOR") {
+        navigate("/staff/queue", { replace: true });
+      } else {
+        navigate("/tickets", { replace: true });
+      }
+      return;
+    }
+
     let isMounted = true;
 
     async function fetchRequesters() {
@@ -43,7 +54,7 @@ export const RequesterSelectorPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [user, navigate]);
 
   const handleContinue = () => {
     if (!selectedId) return;
