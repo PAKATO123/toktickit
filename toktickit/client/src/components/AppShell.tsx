@@ -38,7 +38,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!user && !children) {
     return (
       <div className="tt-shell">
         <header className="tt-header">
@@ -55,14 +55,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     );
   }
 
+  const showRequesterNav = !user || user.role === "REQUESTER";
+
   return (
     <div className="tt-shell">
-      {user.mustChangePassword && <ChangePasswordModal />}
+      {user?.mustChangePassword && <ChangePasswordModal />}
 
       <header className="tt-header">
         <div className="tt-header-inner">
           <Link
-            to={user.role === "REQUESTER" ? "/tickets" : "/staff/queue"}
+            to={user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR" ? "/staff/queue" : "/tickets"}
             className="tt-brand"
             aria-label="TokTickIT Home"
           >
@@ -70,24 +72,28 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           </Link>
 
           <nav className="tt-nav" aria-label="Main Navigation">
-            <NavLink
-              to="/tickets"
-              className={({ isActive }) =>
-                `tt-nav-link ${isActive ? "active" : ""}`
-              }
-              end
-            >
-              My Tickets
-            </NavLink>
-            <NavLink
-              to="/tickets/new"
-              className={({ isActive }) =>
-                `tt-nav-link ${isActive ? "active" : ""}`
-              }
-            >
-              Create Ticket
-            </NavLink>
-            {(user.role === "IT_STAFF" || user.role === "ADMINISTRATOR") && (
+            {showRequesterNav && (
+              <>
+                <NavLink
+                  to="/tickets"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                  end
+                >
+                  My Tickets
+                </NavLink>
+                <NavLink
+                  to="/tickets/new"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  Create Ticket
+                </NavLink>
+              </>
+            )}
+            {(user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR") && (
               <NavLink
                 to="/staff/queue"
                 className={({ isActive }) =>
@@ -97,7 +103,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 Staff Queue
               </NavLink>
             )}
-            {user.role === "ADMINISTRATOR" && (
+            {user?.role === "ADMINISTRATOR" && (
               <NavLink
                 to="/admin/users"
                 className={({ isActive }) =>
@@ -110,8 +116,23 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           </nav>
 
           <div className="tt-header-right" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span className="tt-requester-badge" title="Active Authenticated User">
-              👤 {user.name} <span style={{ opacity: 0.8, fontSize: "11px" }}>({user.role})</span>
+            <span className="tt-requester-badge" title="Active Authenticated User" style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span>👤 {user?.name || "Guest"}</span>
+              {user?.role === "IT_STAFF" && (
+                <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", fontSize: "11px", padding: "2px 6px" }}>
+                  IT Staff
+                </span>
+              )}
+              {user?.role === "ADMINISTRATOR" && (
+                <span className="tt-badge" style={{ backgroundColor: "#FAF5FF", color: "#6B46C1", border: "1px solid #B794F4", fontSize: "11px", padding: "2px 6px" }}>
+                  Admin
+                </span>
+              )}
+              {user?.role === "REQUESTER" && (
+                <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0", fontSize: "11px", padding: "2px 6px" }}>
+                  Requester
+                </span>
+              )}
             </span>
 
             <button

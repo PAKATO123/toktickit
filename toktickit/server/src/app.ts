@@ -763,15 +763,6 @@ app.patch("/api/tickets/:id/claim", requireAuth, requireRole("IT_STAFF", "ADMINI
       });
     }
 
-    if (ticket.assignedToId && ticket.assignedToId !== sessionUser.id && sessionUser.role !== "ADMINISTRATOR") {
-      return res.status(409).json({
-        error: {
-          code: "TICKET_ALREADY_ASSIGNED",
-          message: "This ticket has already been claimed by another IT staff member.",
-        },
-      });
-    }
-
     const nextStatus = ticket.currentStatus === "New" ? "Open" : ticket.currentStatus;
 
     const updated = await prisma.ticket.update({
@@ -1785,11 +1776,15 @@ app.get("/api/users", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), asy
   try {
     const prisma = getPrisma();
     const roleFilter = req.query.role ? String(req.query.role).trim().toUpperCase() : undefined;
+    const isActiveQuery = req.query.isActive;
     const search = req.query.search ? String(req.query.search).trim() : undefined;
 
     const whereClause: any = {};
     if (roleFilter && ["REQUESTER", "IT_STAFF", "ADMINISTRATOR"].includes(roleFilter)) {
       whereClause.role = roleFilter;
+    }
+    if (isActiveQuery !== undefined) {
+      whereClause.isActive = String(isActiveQuery).toLowerCase() === "true";
     }
     if (search) {
       whereClause.OR = [

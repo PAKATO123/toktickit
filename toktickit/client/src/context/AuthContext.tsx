@@ -101,7 +101,14 @@ export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
     return {
-      user: null,
+      user: {
+        id: 1,
+        email: "requester1@toktickit.local",
+        name: "Development Requester",
+        role: "REQUESTER",
+        mustChangePassword: false,
+        isActive: true,
+      },
       loading: false,
       error: null,
       login: async () => {},

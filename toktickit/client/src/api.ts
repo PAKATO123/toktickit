@@ -480,7 +480,7 @@ export async function postInternalNote(ticketId: number, content: string): Promi
 }
 
 export async function getStaffUsers(): Promise<UserOption[]> {
-  const res = await fetch(`${API_BASE_URL}/api/users`, { credentials: "include" });
+  const res = await fetch(`${API_BASE_URL}/api/users?role=IT_STAFF&isActive=true`, { credentials: "include" });
   const json = await res.json();
   if (!res.ok) {
     throw new Error("Unable to load staff users list.");

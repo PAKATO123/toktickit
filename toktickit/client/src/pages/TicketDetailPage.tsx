@@ -936,12 +936,26 @@ export const TicketDetailPage: React.FC = () => {
                             }}
                           >
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                              <span style={{ fontWeight: 600, fontSize: "14px" }}>
-                                {comm.author?.name || "Unknown Author"}{" "}
-                                <span style={{ fontWeight: "normal", fontSize: "12px", color: "var(--color-text-muted)" }}>
-                                  ({comm.author?.role || "USER"})
+                              <div style={{ display: "flex", alignItems: "center" }}>
+                                <span style={{ fontWeight: 600, fontSize: "14px" }}>
+                                  {comm.author?.name || "Unknown Author"}
                                 </span>
-                              </span>
+                                {comm.author?.role === "IT_STAFF" && (
+                                  <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                    IT Staff
+                                  </span>
+                                )}
+                                {comm.author?.role === "ADMINISTRATOR" && (
+                                  <span className="tt-badge" style={{ backgroundColor: "#FAF5FF", color: "#6B46C1", border: "1px solid #B794F4", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                    Admin
+                                  </span>
+                                )}
+                                {comm.author?.role === "REQUESTER" && (
+                                  <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                    Requester
+                                  </span>
+                                )}
+                              </div>
                               <span style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>{formatDate(comm.createdAt)}</span>
                             </div>
                             <p style={{ margin: 0, fontSize: "14px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{comm.content}</p>
@@ -1012,12 +1026,21 @@ export const TicketDetailPage: React.FC = () => {
                             }}
                           >
                             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                              <span style={{ fontWeight: 600, fontSize: "14px", color: "#744210" }}>
-                                👤 {n.author?.name || "Staff Member"}{" "}
-                                <span style={{ fontWeight: "normal", fontSize: "12px", color: "#975A16" }}>
-                                  ({n.author?.role || "IT_STAFF"})
+                              <div style={{ display: "flex", alignItems: "center" }}>
+                                <span style={{ fontWeight: 600, fontSize: "14px", color: "#744210" }}>
+                                  👤 {n.author?.name || "Staff Member"}
                                 </span>
-                              </span>
+                                {n.author?.role === "IT_STAFF" && (
+                                  <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                    IT Staff
+                                  </span>
+                                )}
+                                {n.author?.role === "ADMINISTRATOR" && (
+                                  <span className="tt-badge" style={{ backgroundColor: "#FAF5FF", color: "#6B46C1", border: "1px solid #B794F4", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                    Admin
+                                  </span>
+                                )}
+                              </div>
                               <span style={{ fontSize: "12px", color: "#975A16" }}>{formatDate(n.createdAt)}</span>
                             </div>
                             <p style={{ margin: 0, fontSize: "14px", whiteSpace: "pre-wrap", color: "#2D3748", lineHeight: 1.5 }}>{n.content}</p>
@@ -1067,16 +1090,22 @@ export const TicketDetailPage: React.FC = () => {
 
                   {/* Claim Button */}
                   <div style={{ marginBottom: "20px" }}>
-                    <button
-                      type="button"
-                      data-testid="claim-ticket-button"
-                      className="tt-btn tt-btn-primary"
-                      style={{ width: "100%", justifyContent: "center" }}
-                      disabled={actionLoading || ticket.assignedToId === user?.id}
-                      onClick={handleClaimTicket}
-                    >
-                      {ticket.assignedToId === user?.id ? "✓ Claimed by You" : "Claim Ticket"}
-                    </button>
+                    {(() => {
+                      const currentAssignedId = ticket.assignedToId || ticket.assignedTo?.id || null;
+                      const isClaimedByMe = currentAssignedId === user?.id;
+                      return (
+                        <button
+                          type="button"
+                          data-testid="claim-ticket-button"
+                          className="tt-btn tt-btn-primary"
+                          style={{ width: "100%", justifyContent: "center" }}
+                          disabled={actionLoading || isClaimedByMe}
+                          onClick={handleClaimTicket}
+                        >
+                          {isClaimedByMe ? "✓ Claimed by You" : "Claim Ticket (Assign to Me)"}
+                        </button>
+                      );
+                    })()}
                   </div>
 
                   {/* Assignee Selection */}
@@ -1088,16 +1117,18 @@ export const TicketDetailPage: React.FC = () => {
                       id="assignee-select"
                       data-testid="assignee-select"
                       className="tt-select"
-                      value={ticket.assignedToId || ""}
+                      value={ticket.assignedToId || ticket.assignedTo?.id || ""}
                       disabled={actionLoading}
                       onChange={(e) => handleAssignTicket(e.target.value ? Number(e.target.value) : null)}
                     >
                       <option value="">Unassigned</option>
-                      {staffUsers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.role})
-                        </option>
-                      ))}
+                      {staffUsers
+                        .filter((u) => u.role === "IT_STAFF" && u.isActive)
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name}
+                          </option>
+                        ))}
                     </select>
                   </div>
 
@@ -1110,7 +1141,7 @@ export const TicketDetailPage: React.FC = () => {
                       id="it-priority-select"
                       data-testid="it-priority-select"
                       className="tt-select"
-                      value={ticket.itPriority || ""}
+                      value={ticket.itPriority ? ticket.itPriority.toUpperCase() : ""}
                       disabled={actionLoading}
                       onChange={(e) => handlePriorityChange(e.target.value || null)}
                     >
