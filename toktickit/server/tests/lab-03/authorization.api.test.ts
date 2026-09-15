@@ -1,27 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
 
 describe("Lab 03 Feature 3 — Server-Side Authorization Guards (authorization.api.test.ts)", () => {
-  beforeAll(async () => {
+  beforeEach(async () => {
     const prisma = getPrisma();
-    // Temporarily set mustChangePassword: false for test users so they can access application APIs
+    // Temporarily set mustChangePassword: false for all test users so they can access application APIs
     await prisma.user.updateMany({
-      where: {
-        email: {
-          in: [
-            "requester1@toktickit.local",
-            "requester2@toktickit.local",
-            "requester3@toktickit.local",
-            "staff1@toktickit.local",
-          ],
-        },
-      },
-      data: { mustChangePassword: false },
-    });
-    await prisma.user.update({
-      where: { email: "admin@toktickit.local" },
       data: { mustChangePassword: false },
     });
   });
@@ -262,7 +248,12 @@ describe("Lab 03 Feature 3 — Server-Side Authorization Guards (authorization.a
         .post("/api/auth/login")
         .send({ email: "staff1@toktickit.local", password: "Password123!" });
 
-      const res = await staffAgent.get("/api/users");
+      const res = await staffAgent.post("/api/users").send({
+        name: "Forbidden User",
+        email: "forbidden@toktickit.local",
+        role: "IT_STAFF",
+        initialPassword: "Password123!",
+      });
       expect(res.status).toBe(403);
       expect(res.body.error.code).toBe("FORBIDDEN");
     });

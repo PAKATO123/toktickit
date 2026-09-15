@@ -34,8 +34,9 @@ const USERS = [
   { email: "staff3@toktickit.local", name: "Sarah Support", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
   { email: "staff4@toktickit.local", name: "Tom Inactive Staff", role: "IT_STAFF" as const, isActive: false, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
 
-  // Administrator (1 active)
+  // Administrator (2 active)
   { email: "admin@toktickit.local", name: "System Admin", role: "ADMINISTRATOR" as const, isActive: true, mustChangePassword: false, passwordHash: ADMIN_PASSWORD_HASH },
+  { email: "admin2@toktickit.local", name: "Secondary Admin", role: "ADMINISTRATOR" as const, isActive: true, mustChangePassword: false, passwordHash: ADMIN_PASSWORD_HASH },
 ];
 
 // Legacy Requester fallback entries
