@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import ChangePasswordModal from "../../src/components/auth/ChangePasswordModal";
 import { AuthProvider } from "../../src/context/AuthContext";
 import * as api from "../../src/api";
@@ -28,9 +29,11 @@ describe("Lab 03 Client — Mandatory Password Change Component (ChangePassword.
 
   it("renders non-dismissible password change modal when mustChangePassword = true", async () => {
     render(
-      <AuthProvider>
-        <ChangePasswordModal />
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <ChangePasswordModal />
+        </AuthProvider>
+      </MemoryRouter>
     );
 
     expect(screen.getByTestId("change-password-modal")).toBeDefined();
@@ -41,9 +44,11 @@ describe("Lab 03 Client — Mandatory Password Change Component (ChangePassword.
 
   it("displays real-time password rule validation checklist", () => {
     render(
-      <AuthProvider>
-        <ChangePasswordModal />
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <ChangePasswordModal />
+        </AuthProvider>
+      </MemoryRouter>
     );
 
     const checklist = screen.getByTestId("complexity-checklist");
@@ -56,9 +61,11 @@ describe("Lab 03 Client — Mandatory Password Change Component (ChangePassword.
 
   it("disables save button until password complexity requirements pass", () => {
     render(
-      <AuthProvider>
-        <ChangePasswordModal />
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <ChangePasswordModal />
+        </AuthProvider>
+      </MemoryRouter>
     );
 
     const saveButton = screen.getByTestId("save-password-button") as HTMLButtonElement;
@@ -89,9 +96,11 @@ describe("Lab 03 Client — Mandatory Password Change Component (ChangePassword.
 
     const onSuccess = vi.fn();
     render(
-      <AuthProvider>
-        <ChangePasswordModal onSuccess={onSuccess} />
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <ChangePasswordModal onSuccess={onSuccess} />
+        </AuthProvider>
+      </MemoryRouter>
     );
 
     fireEvent.change(screen.getByTestId("current-password-input"), { target: { value: "Password123!" } });

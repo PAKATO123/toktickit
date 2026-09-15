@@ -1572,17 +1572,253 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// Internal Notes API Stub — POST /api/tickets/:id/notes (F-07)
+// Public Comments API — GET / POST /api/tickets/:id/comments
 // ---------------------------------------------------------------------------
-app.post("/api/tickets/:id/notes", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (_req: Request, res: Response) => {
-  return res.status(201).json({ message: "Note added stub" });
+app.get("/api/tickets/:id/comments", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    if (sessionUser.role === "REQUESTER" && ticket.requesterId !== sessionUser.id) {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: "You do not have permission to view comments for this ticket." },
+      });
+    }
+
+    const comments = await prisma.publicComment.findMany({
+      where: { ticketId },
+      include: {
+        author: { select: { id: true, name: true, role: true, email: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return res.status(200).json({ data: comments });
+  } catch (error) {
+    console.error("Error loading public comments:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to load public comments." },
+    });
+  }
+});
+
+app.post("/api/tickets/:id/comments", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    if (sessionUser.role === "REQUESTER" && ticket.requesterId !== sessionUser.id) {
+      return res.status(403).json({
+        error: { code: "FORBIDDEN", message: "You do not have permission to comment on this ticket." },
+      });
+    }
+
+    const content = req.body.content ? String(req.body.content).trim() : "";
+    if (!content) {
+      return res.status(422).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Comment content cannot be empty.",
+          details: [{ field: "content", message: "Content is required." }],
+        },
+      });
+    }
+
+    if (content.length > 2000) {
+      return res.status(422).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Comment content cannot exceed 2000 characters.",
+        },
+      });
+    }
+
+    const comment = await prisma.publicComment.create({
+      data: {
+        ticketId,
+        authorId: sessionUser.id,
+        content,
+      },
+      include: {
+        author: { select: { id: true, name: true, role: true, email: true } },
+      },
+    });
+
+    return res.status(201).json({ data: comment });
+  } catch (error) {
+    console.error("Error posting public comment:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to post public comment." },
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
-// User Management API Stub — GET /api/users (F-08)
+// Confidential Internal Notes API — GET / POST /api/tickets/:id/notes
 // ---------------------------------------------------------------------------
-app.get("/api/users", requireAuth, requireRole("ADMINISTRATOR"), async (_req: Request, res: Response) => {
-  return res.status(200).json({ data: [] });
+app.get("/api/tickets/:id/notes", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    const notes = await prisma.internalNote.findMany({
+      where: { ticketId },
+      include: {
+        author: { select: { id: true, name: true, role: true, email: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return res.status(200).json({ data: notes });
+  } catch (error) {
+    console.error("Error loading internal notes:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to load internal notes." },
+    });
+  }
+});
+
+app.post("/api/tickets/:id/notes", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    const content = req.body.content ? String(req.body.content).trim() : "";
+    if (!content) {
+      return res.status(422).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Internal note content cannot be empty.",
+          details: [{ field: "content", message: "Content is required." }],
+        },
+      });
+    }
+
+    if (content.length > 2000) {
+      return res.status(422).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Internal note content cannot exceed 2000 characters.",
+        },
+      });
+    }
+
+    const note = await prisma.internalNote.create({
+      data: {
+        ticketId,
+        authorId: sessionUser.id,
+        content,
+      },
+      include: {
+        author: { select: { id: true, name: true, role: true, email: true } },
+      },
+    });
+
+    return res.status(201).json({ data: note });
+  } catch (error) {
+    console.error("Error posting internal note:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to post internal note." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// User Management & Staff Selection API — GET /api/users
+// ---------------------------------------------------------------------------
+app.get("/api/users", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const roleFilter = req.query.role ? String(req.query.role).trim().toUpperCase() : undefined;
+    const search = req.query.search ? String(req.query.search).trim() : undefined;
+
+    const whereClause: any = {};
+    if (roleFilter && ["REQUESTER", "IT_STAFF", "ADMINISTRATOR"].includes(roleFilter)) {
+      whereClause.role = roleFilter;
+    }
+    if (search) {
+      whereClause.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        createdAt: true,
+      },
+      orderBy: [{ role: "asc" }, { name: "asc" }],
+    });
+
+    return res.status(200).json({ data: users });
+  } catch (error) {
+    console.error("Error loading users list:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to load users list." },
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------

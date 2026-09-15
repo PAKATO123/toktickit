@@ -148,6 +148,7 @@ export interface TicketDetailData {
   itPriority?: string | null;
   currentStatus: string;
   isRequesterResolved?: boolean;
+  assignedToId?: number | null;
   assignedTo?: { id: number; name: string; email: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -311,4 +312,178 @@ export function getAttachmentDownloadUrl(attachmentId: number, requesterId?: num
 export function getAttachmentPreviewUrl(attachmentId: number, requesterId?: number): string {
   const query = requesterId ? `?requesterId=${requesterId}` : "";
   return `${API_BASE_URL}/api/attachments/${attachmentId}/preview${query}`;
+}
+
+// ---------------------------------------------------------------------------
+// Staff Ticket Management & Communication APIs (F-08)
+// ---------------------------------------------------------------------------
+
+export async function claimTicket(ticketId: number): Promise<TicketDetailData> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/claim`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to claim ticket.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function assignTicket(ticketId: number, assignedToId: number | null): Promise<TicketDetailData> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/assign`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ assignedToId }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to assign ticket.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function updateItPriority(ticketId: number, itPriority: string | null): Promise<TicketDetailData> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/priority`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ itPriority }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to update IT priority.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function updateTicketStatus(ticketId: number, status: string): Promise<TicketDetailData> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/status`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to update ticket status.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export interface CommentItem {
+  id: number;
+  ticketId: number;
+  authorId: number;
+  content: string;
+  createdAt: string;
+  author: {
+    id: number;
+    name: string;
+    role: string;
+    email: string;
+  };
+}
+
+export interface InternalNoteItem {
+  id: number;
+  ticketId: number;
+  authorId: number;
+  content: string;
+  createdAt: string;
+  author: {
+    id: number;
+    name: string;
+    role: string;
+    email: string;
+  };
+}
+
+export interface UserOption {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+}
+
+export async function getPublicComments(ticketId: number): Promise<CommentItem[]> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/comments`, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to load public comments.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data || [];
+}
+
+export async function postPublicComment(ticketId: number, content: string): Promise<CommentItem> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to post comment.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function getInternalNotes(ticketId: number): Promise<InternalNoteItem[]> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/notes`, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to load internal notes.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data || [];
+}
+
+export async function postInternalNote(ticketId: number, content: string): Promise<InternalNoteItem> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/notes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to post internal note.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function getStaffUsers(): Promise<UserOption[]> {
+  const res = await fetch(`${API_BASE_URL}/api/users`, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error("Unable to load staff users list.");
+  }
+  return json.data || [];
 }
