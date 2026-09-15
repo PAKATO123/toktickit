@@ -26,8 +26,15 @@ export interface PaginationMeta {
 
 export const MyTicketsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedRequester } = useRequester();
   const { user } = useAuth();
+  const { selectedRequester } = useRequester();
+
+  // Redirect IT staff / admin to staff queue
+  useEffect(() => {
+    if (user && (user.role === "IT_STAFF" || user.role === "ADMINISTRATOR")) {
+      navigate("/staff/queue", { replace: true });
+    }
+  }, [user, navigate]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);

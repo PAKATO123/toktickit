@@ -13,6 +13,13 @@ export const CreateTicketPage: React.FC = () => {
   const { selectedRequester, setIsFormDirty } = useRequester();
   const { user } = useAuth();
 
+  // Redirect IT staff / admin to staff queue
+  useEffect(() => {
+    if (user && (user.role === "IT_STAFF" || user.role === "ADMINISTRATOR")) {
+      navigate("/staff/queue", { replace: true });
+    }
+  }, [user, navigate]);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);
   const [previewTicketNumber, setPreviewTicketNumber] = useState<string>("TICK-2026-XXXX");
