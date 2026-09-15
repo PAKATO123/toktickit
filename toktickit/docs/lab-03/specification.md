@@ -183,8 +183,7 @@ Replace the temporary Development Requester selector from Lab 2 with secure auth
 | `GET /api/tickets/:id/comments` | Owned Only | All Tickets | All Tickets |
 | `POST /api/tickets/:id/comments` | Owned Only | All Tickets | All Tickets |
 | `GET /api/tickets/:id/notes` | Forbidden (403) | Permitted | Permitted |
-| `POST /api/tickets/:id/notes` | Forbidden (403) | Permitted | Permitted |
-| `GET /api/users` | Forbidden (403) | Forbidden (403) | Permitted |
+| `GET /api/users` | Forbidden (403) | Permitted (Staff List) | Permitted |
 | `POST /api/users` | Forbidden (403) | Forbidden (403) | Permitted |
 | `PUT/PATCH /api/users/:id` | Forbidden (403) | Forbidden (403) | Permitted |
 | `POST /api/users/:id/reset-password` | Forbidden (403) | Forbidden (403) | Permitted |
@@ -194,7 +193,7 @@ Replace the temporary Development Requester selector from Lab 2 with secure auth
 
 ### Ticket Ownership, Priority, and Status Workflow
 - **BR-08: Ticket Ownership**  
-  A Ticket has one Requester owner (creator) and zero or one assigned IT Staff owner (`assignedToId`). The assigned owner must be an active user with `IT_STAFF` or `ADMINISTRATOR` role.
+  A Ticket has one Requester owner (creator) and zero or one assigned IT Staff owner (`assignedToId`). The assignee options strictly consist of active users with the `IT_STAFF` role (excluding customers/requesters, administrators, and inactive staff members). Any IT Staff member claiming or re-claiming a ticket assigns ownership directly to themselves.
 - **BR-09: IT Priority Defaults & Modification**  
   When a Ticket is created, `itPriority` is initialized to the value of `requestedPriority` (or `Medium` if `requestedPriority` was omitted). `requestedPriority` remains immutable after creation. `itPriority` can only be changed by IT Staff or Administrators.
 - **BR-10: Ticket Status State Machine & Permitted Transitions**  

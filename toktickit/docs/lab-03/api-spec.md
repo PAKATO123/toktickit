@@ -322,12 +322,13 @@ Returns created note object.
 ## 4. Minimalist User Management APIs
 
 ### `GET /api/users`
-Retrieves user list with optional search and role filter.
+Retrieves user list with optional search, role, and active status filters.
 
-- **Access**: `ADMINISTRATOR`
+- **Access**: `ADMINISTRATOR`, `IT_STAFF` (IT Staff permitted for fetching staff list assignment options)
 - **Query Parameters**:
   - `search` (optional string): Match name or email.
   - `role` (optional string): `REQUESTER`, `IT_STAFF`, `ADMINISTRATOR`.
+  - `isActive` (optional boolean/string): `true` or `false` filter.
 
 - **Response (200 OK)**:
 ```json
@@ -344,7 +345,7 @@ Retrieves user list with optional search and role filter.
 ]
 ```
 - **Error Responses**:
-  - `403 Forbidden`: Request made by non-Administrator.
+  - `403 Forbidden`: Request made by a Requester user.
 
 ---
 
