@@ -28,7 +28,7 @@
 | **F-05** | `feature/lab03-05-auth-ui` | Authentication UI (Login Form, Mandatory Password Change Modal, AppShell with User Context) | ✅ Merged |
 | **F-06** | `feature/lab03-06-requester-resolution-ui` | Requester Resolution Indication UI ("I consider this issue resolved"), Confirmation Modal, Badges | 📤 Pushed |
 | **F-07** | `feature/lab03-07-staff-queue-ui` | IT Staff Ticket Queue Page UI (Search, Status/Priority/Assignment Filters, Sort, Pagination) | 📤 Pushed |
-| **F-08** | `feature/lab03-08-staff-ticket-detail-ui` | IT Staff Ticket Detail View (Claim, Reassign, Status Transition, Public Comments & Internal Notes Feed) | ✅ Completed |
+| **F-08** | `feature/lab03-08-staff-ticket-detail-ui` | IT Staff Ticket Detail View (Claim, Reassign, Status Transition, Public Comments & Internal Notes Feed) | 📤 Pushed |
 | **F-09** | `feature/lab03-09-admin-users` | Administrator User Management Backend & UI (`/api/users`, User List, Create/Edit Modals, Safety Guards) | ⏳ Up Next |
 | **F-10** | `feature/lab03-10-e2e-and-docs` | Playwright E2E Testing, Visual Audits, Documentation & Definition of Done Verification | 📅 Planned |
 
