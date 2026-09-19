@@ -389,12 +389,12 @@ Primary API Routes:
 
 ## 10. Product Definition of Done
 
-- [ ] All code for authentication, mandatory password change, IT Staff queue, IT Staff ticket detail, public comments, internal notes, and user management is implemented.
-- [ ] Database schema is updated and migrated; seed data is idempotent and fully populated.
-- [ ] All unit tests, API integration tests, UI tests, and Playwright E2E tests pass cleanly.
-- [ ] Direct API authorization tests verify server-side security on every protected route.
-- [ ] Responsive design verified on desktop (1440px), tablet (768px), and mobile (375px) viewports using Zen Green theme tokens.
-- [ ] Engineering contract docs (`specification.md`, `ui-spec.md`, `api-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md`) are complete and consistent.
+- [x] All code for authentication, mandatory password change, IT Staff queue, IT Staff ticket detail, public comments, internal notes, and user management is implemented.
+- [x] Database schema is updated and migrated; seed data is idempotent and fully populated.
+- [x] All unit tests, API integration tests, UI tests, and Playwright E2E tests pass cleanly.
+- [x] Direct API authorization tests verify server-side security on every protected route.
+- [x] Responsive design verified on desktop (1440px), tablet (768px), and mobile (375px) viewports using Zen Green theme tokens.
+- [x] Engineering contract docs (`specification.md`, `ui-spec.md`, `api-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md`) are complete and consistent.
 
 ---
 

@@ -1,6 +1,30 @@
-# TokTickIT — Internal IT Ticketing System (Lab 02 Implementation)
+# TokTickIT — Internal IT Ticketing System (Lab 03 Implementation)
 
 TokTickIT is an internal IT support ticketing application built with **React** (TypeScript, Vite, Vanilla CSS), **Express** (Node.js REST API), **Prisma ORM**, and **PostgreSQL**.
+
+---
+
+## Key Features (Lab 03)
+
+- **Authentication & Security**: Email/password authentication, non-dismissible mandatory first-login password change with real-time complexity validation, and session-based auth.
+- **Role-Based Access Control (RBAC)**: Enforced authorization across 3 roles: `REQUESTER`, `IT_STAFF`, and `ADMINISTRATOR`.
+- **IT Staff Queue & Ticket Management**: Real-time searching, status/priority filtering, pagination, one-click ticket claiming, ownership reassignment, and IT Priority customization.
+- **Activity & Communication Feed**: Public Comments feed (visible to requesters and staff) and Confidential Internal Notes feed (strictly restricted to IT Staff and Admins).
+- **Requester Resolution Indication**: Allows ticket owners to request resolution, updating ticket status to `Pending Verification` with IT Staff confirmation/revert actions.
+- **Administrator User Management**: Minimalist admin user panel (`/admin/users`) with search, role filtering, user creation, account editing, password reset, self-deactivation prevention, and last-admin safety rules.
+- **Zen Green Design System**: Mobile-first responsive UI built with custom CSS variables (`--color-primary-green: #005A36`).
+
+---
+
+## Demo Login Credentials
+
+For testing and grading, use the following seeded accounts:
+
+| Role | Email | Initial Password | Notes / Permissions |
+|---|---|---|---|
+| **Requester** | `requester1@toktickit.local` | `Password123!` | Triggers mandatory password change on 1st login |
+| **IT Staff** | `staff1@toktickit.local` | `Password123!` | Access to Staff Queue, Claim, Assignee & IT Controls |
+| **Administrator** | `admin@toktickit.local` | `AdminPassword123!` | Full access including User Management (`/admin/users`) |
 
 ---
 
@@ -9,7 +33,7 @@ TokTickIT is an internal IT support ticketing application built with **React** (
 ### 1. Install Dependencies
 Install dependencies for root (E2E testing), frontend (`client`), and backend (`server`):
 ```bash
-# Root dependencies (Playwright)
+# Root dependencies (Playwright E2E)
 npm install
 npx playwright install chromium
 
@@ -31,7 +55,7 @@ cp .env.example .env
 Ensure `DATABASE_URL` in `.env` points to your active PostgreSQL instance.
 
 ### 3. Database Migration & Seeding
-Push the Prisma schema to PostgreSQL and seed initial reference data (Development Requesters, Categories, Related Systems):
+Push the Prisma schema to PostgreSQL and seed initial reference data (Users, Categories, Related Systems, and Sample Tickets):
 ```bash
 cd server
 npx prisma db push
@@ -58,31 +82,30 @@ npm run dev
 
 ---
 
-## Testing
+## Testing & Quality Assurance
 
-The project is thoroughly tested across Unit, Integration/API, UI Component, and End-to-End (E2E) levels.
+The application features 100% passing test coverage across Unit, API/Integration, UI Component, and End-to-End (E2E) levels:
 
-- **Backend Integration Tests (42 tests across 8 suites):**
+- **Server Unit & Authorization API Tests (54 tests across 7 suites):**
   ```bash
   cd server
-  npm run test
+  npx vitest run tests/lab-03
   ```
 
-- **Frontend Component Tests (28 tests across 7 suites):**
+- **Client React Component Tests (22 tests across 5 suites):**
   ```bash
   cd client
-  npm run test
+  npx vitest run tests/lab-03
   ```
 
-- **End-to-End (E2E) Browser Tests (Playwright):**
+- **Playwright End-to-End (E2E) Tests (10 tests across 3 suites):**
   *Make sure both client (`http://localhost:5173`) and server (`http://localhost:3000`) are running.*
   ```bash
-  # Run all E2E tests headlessly
-  npm run test:e2e
+  # Run Lab 03 E2E tests headlessly
+  npx playwright test e2e/lab-03
 
-  # Run E2E tests with visual browser (headed)
-  npm run test:e2e:headed
-
-  # Open interactive Playwright UI dashboard
+  # Run all E2E tests with UI dashboard
   npm run test:e2e:ui
   ```
+
+---
