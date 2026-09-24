@@ -331,6 +331,16 @@ export const TicketDetailPage: React.FC = () => {
   const activeAttachments = ticket?.attachments?.filter((a) => !a.isDeleted) || [];
   const deletedAttachments = ticket?.attachments?.filter((a) => a.isDeleted) || [];
 
+  const formatPriorityText = (priority: string | null): string => {
+    if (!priority) return "Unassigned";
+    const up = priority.toUpperCase();
+    if (up === "URGENT") return "Urgent";
+    if (up === "HIGH") return "High";
+    if (up === "MEDIUM") return "Medium";
+    if (up === "LOW") return "Low";
+    return priority;
+  };
+
   const renderPriorityBadge = (priority: string | null, labelPrefix?: string) => {
     if (!priority) {
       return <span style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>Unassigned</span>;
@@ -344,7 +354,7 @@ export const TicketDetailPage: React.FC = () => {
 
     return (
       <span className={badgeClass}>
-        {labelPrefix ? `${labelPrefix}: ` : ""}{priority}
+        {labelPrefix ? `${labelPrefix}: ` : ""}{formatPriorityText(priority)}
       </span>
     );
   };
@@ -700,7 +710,7 @@ export const TicketDetailPage: React.FC = () => {
                       type="text"
                       className="tt-input tt-readonly"
                       readOnly
-                      value={ticket.requestedPriority || "Unassigned"}
+                      value={formatPriorityText(ticket.requestedPriority)}
                     />
                   </div>
                 </div>
