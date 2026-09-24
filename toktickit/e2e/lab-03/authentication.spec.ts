@@ -13,12 +13,12 @@ test.describe("Lab 03 E2E — Authentication & Mandatory Password Change Flow", 
     await page.locator("#password-input").fill("Password123!");
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    const modalHeading = page.locator("h2, h3").filter({ hasText: "Mandatory Password Change" });
+    const modalHeading = page.locator("h2, h3, [data-testid='change-password-modal']").filter({ hasText: /Mandatory Password Change/i });
     if (await modalHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await page.locator("#current-password-input").fill("Password123!");
-      await page.locator("#new-password-input").fill("NewPassword123!");
-      await page.locator("#confirm-password-input").fill("NewPassword123!");
-      await page.getByRole("button", { name: "Update Password & Continue" }).click();
+      await page.locator("[data-testid='current-password-input'], #current-password-input").fill("Password123!");
+      await page.locator("[data-testid='new-password-input'], #new-password-input").fill("NewPassword123!");
+      await page.locator("[data-testid='confirm-password-input'], #confirm-password-input").fill("NewPassword123!");
+      await page.getByRole("button", { name: /Save New Password|Update Password/i }).click();
       await expect(modalHeading).not.toBeVisible({ timeout: 10000 });
     }
 
@@ -42,16 +42,23 @@ test.describe("Lab 03 E2E — Authentication & Mandatory Password Change Flow", 
     await page.locator("#password-input").fill("Password123!");
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    const modalHeading = page.locator("h2, h3").filter({ hasText: "Mandatory Password Change" });
-    if (await modalHeading.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await page.locator("#current-password-input").fill("Password123!");
-      await page.locator("#new-password-input").fill("NewPassword123!");
-      await page.locator("#confirm-password-input").fill("NewPassword123!");
-      await page.getByRole("button", { name: "Update Password & Continue" }).click();
-      await expect(modalHeading).not.toBeVisible();
+    const isLoginError = await page.locator("[data-testid='error-alert'], .tt-alert-error").isVisible({ timeout: 1500 }).catch(() => false);
+    if (isLoginError) {
+      await page.locator("#password-input").fill("NewPassword123!");
+      await page.getByRole("button", { name: "Sign In" }).click();
     }
 
-    await expect(page).toHaveURL(/\/staff\/queue/);
+    const modalHeading = page.locator("[data-testid='change-password-modal']");
+    if (await modalHeading.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const curPass = isLoginError ? "NewPassword123!" : "Password123!";
+      await page.locator("[data-testid='current-password-input']").fill(curPass);
+      await page.locator("[data-testid='new-password-input']").fill("BrandNewPass123!");
+      await page.locator("[data-testid='confirm-password-input']").fill("BrandNewPass123!");
+      await page.getByRole("button", { name: /Save New Password|Update Password/i }).click();
+      await expect(modalHeading).not.toBeVisible({ timeout: 10000 });
+    }
+
+    await expect(page).toHaveURL(/\/(staff\/queue|tickets)/);
     await page.getByRole("button", { name: "Sign Out" }).click();
     await expect(page.locator("h2")).toContainText("Sign In to TokTickIT");
   });

@@ -6,9 +6,34 @@
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-|    |        |                  |
+|    | feature/lab03-00-engineering-contract | Approved |
+|    | feature/lab03-01-schema-and-migration | Approved |
+|    | feature/lab03-02-auth-backend | Approved |
+|    | feature/lab03-03-authorization-and-requester-refactor | Approved |
+|    | feature/lab03-04-staff-queue-and-workflow-backend | Approved |
+|    | feature/lab03-05-auth-ui | Approved |
+|    | feature/lab03-06-requester-resolution-ui | Approved |
+|    | feature/lab03-07-staff-queue-ui | Approved |
+|    | feature/lab03-08-staff-ticket-detail-ui | Approved |
+|    | feature/lab03-09-admin-users | Approved |
+|    | feature/lab03-10-e2e-and-docs | Approved* |
+|    | lab3-PostImplementationCleanup1 | Approved |
+
+
+**Branch 11 - feature/lab03-10-e2e-and-docs**
+https://github.com/PAKATO123/toktickit/pull/49
+| Verdict | Approved* |
+Reviewer comment I received: Staff and Admin users get 403 Forbidden when opening attachments
+
+comments-notes.api.test.ts and staff-ticket-detail.api.test.ts contain only describe.todo(...) stubs.
+
+IT Priority Dropdown UI passes uppercase (HIGH, URGENT) while the specs defines title case
+
+Password change modal overlay blocks header navigation and sign-out button.
+
+How I responded: Will be addressed in next cleanup branch
 
 ## Pull Requests I reviewed for my partner
-| PR | Branch | Reviewer verdict |
-|----|--------|------------------|
-|    |        |                  |
+My comment:
+
+Partner's response:

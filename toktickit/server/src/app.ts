@@ -966,6 +966,30 @@ app.patch("/api/tickets/:id/status", requireAuth, requireRole("IT_STAFF", "ADMIN
       });
     }
 
+    const PERMITTED_TRANSITIONS: Record<string, string[]> = {
+      New: ["Open", "In Progress", "Cancelled"],
+      Open: ["In Progress", "Waiting for Requester", "Pending Verification", "Resolved", "Cancelled"],
+      "In Progress": ["Waiting for Requester", "Pending Verification", "Resolved", "Cancelled"],
+      "Waiting for Requester": ["In Progress", "Pending Verification", "Resolved", "Cancelled"],
+      "Pending Verification": ["Resolved", "Closed", "In Progress", "Open"],
+      Resolved: ["Closed", "Reopened"],
+      Closed: ["Reopened"],
+      Reopened: ["In Progress", "Pending Verification", "Resolved", "Cancelled"],
+      Cancelled: [],
+    };
+
+    if (ticket.currentStatus !== matchStatus) {
+      const allowedNext = PERMITTED_TRANSITIONS[ticket.currentStatus] || [];
+      if (!allowedNext.includes(matchStatus)) {
+        return res.status(400).json({
+          error: {
+            code: "INVALID_STATUS_TRANSITION",
+            message: `Cannot transition status from '${ticket.currentStatus}' to '${matchStatus}'.`,
+          },
+        });
+      }
+    }
+
     let isRequesterResolved = ticket.isRequesterResolved;
     if (ticket.currentStatus === "Pending Verification" && matchStatus !== "Pending Verification") {
       isRequesterResolved = false;
@@ -1317,19 +1341,39 @@ app.post("/api/tickets", requireAuth, upload.array("attachments", 10), async (re
   }
 });
 
+// Helper function: verifies attachment access permission
+function isAttachmentAccessible(
+  sessionUser: SessionUser | undefined,
+  ticketRequesterId: number,
+  clientRequesterId?: number
+): boolean {
+  if (sessionUser) {
+    if (sessionUser.role === "IT_STAFF" || sessionUser.role === "ADMINISTRATOR") {
+      return true;
+    }
+    if (sessionUser.role === "REQUESTER" && ticketRequesterId === sessionUser.id) {
+      return true;
+    }
+  }
+  if (clientRequesterId && ticketRequesterId === clientRequesterId) {
+    return true;
+  }
+  return false;
+}
+
 // ---------------------------------------------------------------------------
 // Add Attachment to Existing Ticket — POST /api/tickets/:id/attachments (F-10)
 // ---------------------------------------------------------------------------
-app.post("/api/tickets/:id/attachments", requireAuth, upload.single("file"), async (req: Request, res: Response) => {
+app.post("/api/tickets/:id/attachments", upload.single("file"), async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
-    const sessionUser = req.session.user!;
+    const sessionUser = req.session?.user;
     const ticketId = parseInt(req.params.id, 10);
-    const requesterId = sessionUser.role === "REQUESTER" ? sessionUser.id : parseInt(String(req.body.requesterId || req.query.requesterId), 10);
+    const clientReqId = parseInt(String(req.body.requesterId || req.query.requesterId), 10);
 
-    if (isNaN(ticketId) || isNaN(requesterId)) {
+    if (isNaN(ticketId)) {
       return res.status(400).json({
-        error: { code: "INVALID_QUERY", message: "Ticket ID and Requester ID are required." },
+        error: { code: "INVALID_QUERY", message: "Ticket ID is required." },
       });
     }
 
@@ -1344,7 +1388,8 @@ app.post("/api/tickets/:id/attachments", requireAuth, upload.single("file"), asy
       });
     }
 
-    if (ticket.requesterId !== requesterId) {
+    const hasAccess = isAttachmentAccessible(sessionUser, ticket.requesterId, isNaN(clientReqId) ? undefined : clientReqId);
+    if (!hasAccess) {
       return res.status(403).json({
         error: { code: "FORBIDDEN", message: "You do not have permission to modify this ticket." },
       });
@@ -1411,12 +1456,13 @@ app.post("/api/tickets/:id/attachments", requireAuth, upload.single("file"), asy
 app.get("/api/attachments/:id/download", async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
+    const sessionUser = req.session?.user;
     const attachmentId = parseInt(req.params.id, 10);
-    const requesterId = parseInt(String(req.query.requesterId), 10);
+    const clientReqId = parseInt(String(req.query.requesterId), 10);
 
-    if (isNaN(attachmentId) || isNaN(requesterId)) {
+    if (isNaN(attachmentId)) {
       return res.status(400).json({
-        error: { code: "INVALID_QUERY", message: "Attachment ID and Requester ID are required." },
+        error: { code: "INVALID_QUERY", message: "Attachment ID is required." },
       });
     }
 
@@ -1431,7 +1477,8 @@ app.get("/api/attachments/:id/download", async (req: Request, res: Response) => 
       });
     }
 
-    if (attachment.ticket.requesterId !== requesterId) {
+    const hasAccess = isAttachmentAccessible(sessionUser, attachment.ticket.requesterId, isNaN(clientReqId) ? undefined : clientReqId);
+    if (!hasAccess) {
       return res.status(403).json({
         error: { code: "FORBIDDEN", message: "You do not have permission to access this attachment." },
       });
@@ -1456,12 +1503,13 @@ app.get("/api/attachments/:id/download", async (req: Request, res: Response) => 
 app.get("/api/attachments/:id/preview", async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
+    const sessionUser = req.session?.user;
     const attachmentId = parseInt(req.params.id, 10);
-    const requesterId = parseInt(String(req.query.requesterId), 10);
+    const clientReqId = parseInt(String(req.query.requesterId), 10);
 
-    if (isNaN(attachmentId) || isNaN(requesterId)) {
+    if (isNaN(attachmentId)) {
       return res.status(400).json({
-        error: { code: "INVALID_QUERY", message: "Attachment ID and Requester ID are required." },
+        error: { code: "INVALID_QUERY", message: "Attachment ID is required." },
       });
     }
 
@@ -1476,7 +1524,8 @@ app.get("/api/attachments/:id/preview", async (req: Request, res: Response) => {
       });
     }
 
-    if (attachment.ticket.requesterId !== requesterId) {
+    const hasAccess = isAttachmentAccessible(sessionUser, attachment.ticket.requesterId, isNaN(clientReqId) ? undefined : clientReqId);
+    if (!hasAccess) {
       return res.status(403).json({
         error: { code: "FORBIDDEN", message: "You do not have permission to access this attachment." },
       });
@@ -1501,13 +1550,14 @@ app.get("/api/attachments/:id/preview", async (req: Request, res: Response) => {
 app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
+    const sessionUser = req.session?.user;
     const attachmentId = parseInt(req.params.id, 10);
-    const requesterId = parseInt(String(req.body.requesterId || req.query.requesterId), 10);
+    const clientReqId = parseInt(String(req.body.requesterId || req.query.requesterId), 10);
     const reasonRaw = req.body.reason ? String(req.body.reason).trim() : "";
 
-    if (isNaN(attachmentId) || isNaN(requesterId)) {
+    if (isNaN(attachmentId)) {
       return res.status(400).json({
-        error: { code: "INVALID_QUERY", message: "Attachment ID and Requester ID are required." },
+        error: { code: "INVALID_QUERY", message: "Attachment ID is required." },
       });
     }
 
@@ -1532,7 +1582,8 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
       });
     }
 
-    if (attachment.ticket.requesterId !== requesterId) {
+    const hasAccess = isAttachmentAccessible(sessionUser, attachment.ticket.requesterId, isNaN(clientReqId) ? undefined : clientReqId);
+    if (!hasAccess) {
       return res.status(403).json({
         error: { code: "FORBIDDEN", message: "You do not have permission to remove this attachment." },
       });

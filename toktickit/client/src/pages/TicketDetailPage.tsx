@@ -1179,15 +1179,15 @@ export const TicketDetailPage: React.FC = () => {
                       id="it-priority-select"
                       data-testid="it-priority-select"
                       className="tt-select"
-                      value={ticket.itPriority ? ticket.itPriority.toUpperCase() : ""}
+                      value={ticket.itPriority || ""}
                       disabled={actionLoading}
                       onChange={(e) => handlePriorityChange(e.target.value || null)}
                     >
                       <option value="">Unassigned</option>
-                      <option value="LOW">Low</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HIGH">High</option>
-                      <option value="URGENT">Urgent</option>
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
                     </select>
                   </div>
 
@@ -1201,18 +1201,29 @@ export const TicketDetailPage: React.FC = () => {
                       data-testid="status-select"
                       className="tt-select"
                       value={ticket.currentStatus}
-                      disabled={actionLoading}
+                      disabled={actionLoading || ticket.currentStatus === "Cancelled"}
                       onChange={(e) => handleStatusChange(e.target.value)}
                     >
-                      <option value="New">New</option>
-                      <option value="Open">Open</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Waiting for Requester">Waiting for Requester</option>
-                      <option value="Pending Verification">Pending Verification</option>
-                      <option value="Resolved">Resolved</option>
-                      <option value="Closed">Closed</option>
-                      <option value="Cancelled">Cancelled</option>
-                      <option value="Reopened">Reopened</option>
+                      {(() => {
+                        const PERMITTED_MAP: Record<string, string[]> = {
+                          New: ["Open", "In Progress", "Cancelled"],
+                          Open: ["In Progress", "Waiting for Requester", "Pending Verification", "Resolved", "Cancelled"],
+                          "In Progress": ["Waiting for Requester", "Pending Verification", "Resolved", "Cancelled"],
+                          "Waiting for Requester": ["In Progress", "Pending Verification", "Resolved", "Cancelled"],
+                          "Pending Verification": ["Resolved", "Closed", "In Progress", "Open"],
+                          Resolved: ["Closed", "Reopened"],
+                          Closed: ["Reopened"],
+                          Reopened: ["In Progress", "Pending Verification", "Resolved", "Cancelled"],
+                          Cancelled: [],
+                        };
+                        const nextAllowed = PERMITTED_MAP[ticket.currentStatus] || [];
+                        const allOptions = Array.from(new Set([ticket.currentStatus, ...nextAllowed]));
+                        return allOptions.map((s) => (
+                          <option key={s} value={s}>
+                            {s} {s === ticket.currentStatus ? "(Current)" : ""}
+                          </option>
+                        ));
+                      })()}
                     </select>
                   </div>
 
