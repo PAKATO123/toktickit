@@ -6,18 +6,18 @@
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-|    | feature/lab03-00-engineering-contract | Approved |
-|    | feature/lab03-01-schema-and-migration | Approved |
-|    | feature/lab03-02-auth-backend | Approved |
-|    | feature/lab03-03-authorization-and-requester-refactor | Approved |
-|    | feature/lab03-04-staff-queue-and-workflow-backend | Approved |
-|    | feature/lab03-05-auth-ui | Approved |
-|    | feature/lab03-06-requester-resolution-ui | Approved |
-|    | feature/lab03-07-staff-queue-ui | Approved |
-|    | feature/lab03-08-staff-ticket-detail-ui | Approved |
-|    | feature/lab03-09-admin-users | Approved |
-|    | feature/lab03-10-e2e-and-docs | Approved* |
-|    | lab3-PostImplementationCleanup1 | Approved |
+| #39 | feature/lab03-00-engineering-contract | Approved |
+| #40 | feature/lab03-01-schema-and-migration | Approved |
+| #41 | feature/lab03-02-auth-backend | Approved |
+| #42 | feature/lab03-03-authorization-and-requester-refactor | Approved |
+| #43 | feature/lab03-04-staff-queue-and-workflow-backend | Approved |
+| #44 | feature/lab03-05-auth-ui | Approved |
+| #45 | feature/lab03-06-requester-resolution-ui | Approved |
+| #46 | feature/lab03-07-staff-queue-ui | Approved |
+| #47 | feature/lab03-08-staff-ticket-detail-ui | Approved |
+| #48 | feature/lab03-09-admin-users | Approved |
+| #49 | feature/lab03-10-e2e-and-docs | Approved* |
+| #61 | lab3-PostImplementationCleanup1 | Approved |
 
 
 **Branch  9 - feature/lab03-08-staff-ticket-detail-ui**
@@ -39,7 +39,7 @@ IT Priority Dropdown UI passes uppercase (HIGH, URGENT) while the specs defines 
 
 Password change modal overlay blocks header navigation and sign-out button.
 
-How I responded: Addressed in lab3-PostImplementationCleanup1 cleanup branch.
+How I responded: will be addressed in next clean up branch
 
 ## Pull Requests I reviewed for my partner
 https://github.com/Tammathorn/toktickit/pull/46
