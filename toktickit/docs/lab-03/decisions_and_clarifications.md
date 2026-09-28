@@ -55,3 +55,33 @@ Please confirm if you are happy with these default choices or if you prefer an a
    - **Disabled Button State**: Once confirmed, the request is sent, and the button becomes disabled/greyed out showing `"Resolution Requested ✓"` to clearly indicate it has already been submitted.
    - **Unique Status (`Pending Verification`)**: The ticket status transitions to `Pending Verification` (or `Resolved (Pending Review)`).
    - **IT Staff Revert Option**: IT Staff viewing the ticket can either formally confirm and transition status to `Resolved` / `Closed`, or revert the process back to `In Progress` (or `Open`) if they deem the problem is not fully solved, resetting the resolution request state.
+
+---
+
+## 3. Implemented Feature Refinements & User Feedback Decisions (Sprint 3)
+
+### 3.1 IT Staff Queue Layout & Pagination Consistency (Feature 7)
+- **Permanent "Clear Filters" Button**:
+  - The "Clear All Filters" button is permanently positioned on the filter toolbar and rendered as greyed out (disabled) when no active filters or custom sorting are set. This prevents horizontal and vertical layout jumps when filters are enabled or cleared.
+- **Header Sorting & Table Column Layout Stability**:
+  - Fixed-width and flex-basis bounds are enforced on table columns (Status, IT Priority, Assignee, Related System) so header sorting buttons and variable-length text strings (e.g., 3-letter vs 2-word statuses) do not cause table shift.
+- **Single-Line Pagination Footer**:
+  - The "Per page:" dropdown selector, total item counter, and page navigation controls are rendered inline inside a single flex row container (`display: flex; flex-direction: row; align-items: center`) to prevent multi-line wrapping on standard screen resolutions.
+- **Initial Password Change Exemption for IT Staff / Admins**:
+  - Test and seed accounts for IT Staff and Administrators are initialized with `mustChangePassword: false` (or exempted upon initial setup) to ensure smooth role testing and operational flow without forcing password resets during development evaluations.
+
+### 3.2 Staff Ticket Detail & Role-Based UI Scoping (Feature 8)
+- **Assignee Dropdown Filtering**:
+  - The Assignee select dropdown on the ticket detail page is strictly filtered to active users with the `IT_STAFF` role (`role = IT_STAFF`, `isActive = true`).
+  - Customer/Requester accounts, Administrator accounts, and inactive staff members are omitted from assignment options.
+  - Requesters cannot assign staff or access assignment controls.
+- **Claim & Re-claim Ticket Action**:
+  - Clicking "Claim Ticket" or reassigning a ticket directly reassigns `assignedToId` to the logged-in IT Staff user. If already assigned to another staff member, re-claiming updates assignment back to the current user cleanly.
+- **Human-Readable Role Badges**:
+  - Raw internal role strings (e.g. `(IT_STAFF)`, `(REQUESTER)`, `(ADMINISTRATOR)`) in the top navigation bar and comment/note author metadata are replaced with styled pill badges (`IT Staff`, `Admin`, `Requester`).
+- **Toast Notifications Position**:
+  - All application toast notifications are positioned at the bottom-right corner of the viewport (`bottom: 24px; right: 24px; z-index: 1200`) to prevent obstructing user profile details, role badges, and the Sign Out button in the top navigation bar.
+- **Staff & Admin Route Scoping & Auto-Redirection**:
+  - "My Tickets" and "Create Ticket" navigation links are hidden for `IT_STAFF` and `ADMINISTRATOR` roles in `AppShell`.
+  - Direct URL access by IT Staff or Admin to requester routes (`/tickets` or `/tickets/new`) automatically redirects the user to `/staff/queue`.
+

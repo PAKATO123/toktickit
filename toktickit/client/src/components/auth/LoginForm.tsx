@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { getMeApi } from "../../api";
 
 export interface LoginFormProps {
   onSuccess?: () => void;
@@ -30,7 +31,16 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       if (onSuccess) {
         onSuccess();
       } else {
-        navigate("/tickets");
+        try {
+          const me = await getMeApi();
+          if (me.user?.role === "IT_STAFF" || me.user?.role === "ADMINISTRATOR") {
+            navigate("/staff/queue", { replace: true });
+          } else {
+            navigate("/tickets", { replace: true });
+          }
+        } catch {
+          navigate("/tickets", { replace: true });
+        }
       }
     } catch (err: any) {
       setLocalError(err.message || "Invalid email address or password.");

@@ -28,8 +28,8 @@
 | **F-05** | `feature/lab03-05-auth-ui` | Authentication UI (Login Form, Mandatory Password Change Modal, AppShell with User Context) | ✅ Merged |
 | **F-06** | `feature/lab03-06-requester-resolution-ui` | Requester Resolution Indication UI ("I consider this issue resolved"), Confirmation Modal, Badges | 📤 Pushed |
 | **F-07** | `feature/lab03-07-staff-queue-ui` | IT Staff Ticket Queue Page UI (Search, Status/Priority/Assignment Filters, Sort, Pagination) | 📤 Pushed |
-| **F-08** | `feature/lab03-08-staff-ticket-detail-ui` | IT Staff Ticket Detail View (Claim, Reassign, Status Transition, Public Comments & Internal Notes Feed) | ⏳ Up Next |
-| **F-09** | `feature/lab03-09-admin-users` | Administrator User Management Backend & UI (`/api/users`, User List, Create/Edit Modals, Safety Guards) | 📅 Planned |
+| **F-08** | `feature/lab03-08-staff-ticket-detail-ui` | IT Staff Ticket Detail View (Claim, Reassign, Status Transition, Public Comments & Internal Notes Feed) | 📤 Pushed |
+| **F-09** | `feature/lab03-09-admin-users` | Administrator User Management Backend & UI (`/api/users`, User List, Create/Edit Modals, Safety Guards) | ⏳ Up Next |
 | **F-10** | `feature/lab03-10-e2e-and-docs` | Playwright E2E Testing, Visual Audits, Documentation & Definition of Done Verification | 📅 Planned |
 
 ---
@@ -90,7 +90,7 @@ Implement backend session management, credential validation, password hashing, a
   - Happy path login, logout, profile fetch, password change.
   - Invalid password (401), inactive account (401), weak new password (400).
 
-**Testable when F-02 is done:**
+**Testable when F-03 is done:**
 - `POST /api/auth/login` returns `200 OK` with session cookie for valid credentials.
 - Deactivated user login returns `401 Unauthorized`.
 - User with `mustChangePassword = true` attempting restricted endpoints receives forced password change error.
@@ -242,23 +242,32 @@ Build the dedicated IT Staff Ticket Queue page (`/staff/queue`).
 ### F-08 · IT Staff Ticket Detail Management & Activity Feed UI
 **Prerequisites:** F-04, F-05, F-07  
 **Branch:** `feature/lab03-08-staff-ticket-detail-ui`  
-**Status:** 📅 Planned
+**Status:** ✅ Completed
 
-Build the IT Staff management controls and activity feed on ticket detail view.
+Build the IT Staff management controls and activity feed on ticket detail view (`TicketDetailPage.tsx`).
 
 **Scope:**
 - Sidebar Management Controls:
-  - Claim button, Reassign dropdown, IT Priority selector, Status transition dropdown.
-- `Pending Verification` Resolution Controls:
-  - Staff "Confirm Resolution" (closes ticket) and "Revert to In Progress" (resets `isRequesterResolved = false`).
-- Tabbed Activity Feed:
-  - Public Comments feed + Confidential Internal Notes feed (yellow tinted container).
-- Component Tests (`client/src/lab-03/__tests__/StaffDetail.test.tsx`).
+  - Claim / Re-claim button (`data-testid="claim-ticket-button"`). Claiming assigns ticket directly to the claimer.
+  - Assignee select dropdown (`data-testid="assignee-select"`), filtered to active `IT_STAFF` members only (excluding requesters, admins, and inactive users).
+  - IT Priority selector (`data-testid="it-priority-select"`), correctly displaying initial/updated priority values (`LOW`, `MEDIUM`, `HIGH`, `URGENT`).
+  - Status transition dropdown (`data-testid="status-select"`).
+- `Pending Verification` Resolution Actions:
+  - Staff "Confirm Resolution" (`data-testid="confirm-verification-button"`) and "Revert to In Progress" (`data-testid="revert-verification-button"`).
+- Tabbed Activity Feed & Communication:
+  - Public Comments feed (`data-testid="comments-tab"`, `data-testid="comments-feed"`, `data-testid="comment-input"`, `data-testid="post-comment-button"`).
+  - Confidential Internal Notes feed (`data-testid="notes-tab"`, `data-testid="notes-feed"`, `data-testid="note-input"`, `data-testid="post-note-button"`), with yellow confidential warning container (`#FEFCBF`).
+- Role Clearance Badges:
+  - Styled clearance badges (`IT Staff`, `Admin`, `Requester`) replace raw text strings.
+- Navigation & Notification Enhancements:
+  - Toast notifications positioned at bottom-right (`bottom: 24px; right: 24px`).
+  - Automatic route protection redirecting IT Staff / Admin away from requester routes (`/tickets`, `/tickets/new`) to `/staff/queue`.
+- Component Tests (`client/tests/lab-03/StaffTicketDetail.test.tsx`): 5/5 unit tests passed.
 
 **Testable when F-08 is done:**
-- Staff can claim/reassign tickets, change priority, and transition status on detail view.
-- Staff can revert `Pending Verification` back to `In Progress` or confirm resolution to Close.
-- Public comments and internal notes feeds post and display cleanly.
+- Staff can claim/reassign tickets to active IT staff, change priority, and transition status on detail view.
+- Staff can revert `Pending Verification` back to `In Progress` or confirm resolution.
+- Public comments and confidential internal notes feeds post and display cleanly.
 - Component tests pass.
 
 ---

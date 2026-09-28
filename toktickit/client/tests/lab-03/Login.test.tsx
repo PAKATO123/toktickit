@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import LoginForm from "../../src/components/auth/LoginForm";
 import { AuthProvider } from "../../src/context/AuthContext";
 import * as api from "../../src/api";
@@ -19,9 +20,11 @@ describe("Lab 03 Client — Login Component (Login.test.tsx)", () => {
 
   it("renders email and password inputs with Sign In button", () => {
     render(
-      <AuthProvider>
-        <LoginForm />
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <LoginForm />
+        </AuthProvider>
+      </MemoryRouter>
     );
 
     expect(screen.getByTestId("email-input")).toBeDefined();
@@ -42,9 +45,11 @@ describe("Lab 03 Client — Login Component (Login.test.tsx)", () => {
 
     const onSuccess = vi.fn();
     render(
-      <AuthProvider>
-        <LoginForm onSuccess={onSuccess} />
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <LoginForm onSuccess={onSuccess} />
+        </AuthProvider>
+      </MemoryRouter>
     );
 
     fireEvent.change(screen.getByTestId("email-input"), { target: { value: "requester1@toktickit.local" } });
@@ -64,9 +69,11 @@ describe("Lab 03 Client — Login Component (Login.test.tsx)", () => {
     (api.loginApi as any).mockRejectedValueOnce(new Error("Invalid email address or password."));
 
     render(
-      <AuthProvider>
-        <LoginForm />
-      </AuthProvider>
+      <MemoryRouter>
+        <AuthProvider>
+          <LoginForm />
+        </AuthProvider>
+      </MemoryRouter>
     );
 
     fireEvent.change(screen.getByTestId("email-input"), { target: { value: "requester1@toktickit.local" } });

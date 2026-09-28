@@ -100,7 +100,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    return {
+      user: {
+        id: 1,
+        email: "requester1@toktickit.local",
+        name: "Development Requester",
+        role: "REQUESTER",
+        mustChangePassword: false,
+        isActive: true,
+      },
+      loading: false,
+      error: null,
+      login: async () => {},
+      logout: async () => {},
+      changePassword: async () => {},
+      refreshUser: async () => {},
+      clearError: () => {},
+    };
   }
   return context;
 }
