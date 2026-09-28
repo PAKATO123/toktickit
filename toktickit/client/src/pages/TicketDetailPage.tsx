@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
+import { useAuth } from "../context/AuthContext";
 import {
   getTicketDetail,
   addAttachmentToTicket,
@@ -19,6 +20,7 @@ export const TicketDetailPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { selectedRequester } = useRequester();
+  const { user } = useAuth();
 
   const [ticket, setTicket] = useState<TicketDetailData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,8 +43,10 @@ export const TicketDetailPage: React.FC = () => {
     (location.state as { toastMessage?: string })?.toastMessage || null
   );
 
+  const currentRequesterId = selectedRequester?.id || user?.id;
+
   // Track initial requester ID to detect requester switches (BR-07)
-  const initialRequesterIdRef = useRef<number | null>(selectedRequester ? selectedRequester.id : null);
+  const initialRequesterIdRef = useRef<number | null>(currentRequesterId || null);
 
   // BR-07: Redirect to /tickets if requester context changes while on detail page
   useEffect(() => {
@@ -62,14 +66,14 @@ export const TicketDetailPage: React.FC = () => {
   }, [toastMessage]);
 
   const loadTicket = async () => {
-    if (!id || !selectedRequester) return;
+    if (!id || !currentRequesterId) return;
 
     setLoading(true);
     setErrorStatus(null);
     setErrorMessage(null);
 
     try {
-      const data = await getTicketDetail(id, selectedRequester.id);
+      const data = await getTicketDetail(id, currentRequesterId);
       setTicket(data);
     } catch (err: any) {
       console.error("Error fetching ticket detail:", err);
