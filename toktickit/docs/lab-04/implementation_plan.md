@@ -22,8 +22,8 @@
 
 | Feature | Branch Name | Scope Summary | Status |
 |---|---|---|---|
-| **F-00** | `feature/lab04-00-foundations` | Sprint 4 Engineering Contract, Prisma `ActionTaken` schema, migration, seed increment, test file stubs | 🔄 In Progress |
-| **F-01** | `feature/lab04-01-actions-taken` | Actions Taken backend APIs, RBAC authorization, Ticket Detail `ActionsTaken` UI component (list & drawer), unit/API tests | ⏳ Planned |
+| **F-00** | `feature/lab04-00-foundations` | Sprint 4 Engineering Contract, Prisma `ActionTaken` schema, migration, seed increment, test file stubs | ✅ Merged |
+| **F-01** | `feature/lab04-01-actions-taken` | Actions Taken backend APIs, RBAC authorization, Ticket Detail `ActionsTaken` UI component (list & drawer), unit/API tests | ✅ Completed |
 | **F-02** | `feature/lab04-02-role-dashboards` | Role Dashboard APIs, uniform `/requester/xxx` routing refactor, Requester/Staff/Admin Dashboard UI, card drill-down, component tests | ⏳ Planned |
 | **F-03** | `feature/lab04-03-e2e-and-hardening` | Playwright E2E test suite, full Labs 1-4 regression testing, Zen Green visual polish, accessibility audit, final documentation | ⏳ Planned |
 
