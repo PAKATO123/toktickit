@@ -543,10 +543,464 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
 });
 
 // ---------------------------------------------------------------------------
-// IT Staff Ticket Queue Stub — GET /api/tickets/staff-queue (F-04)
+// IT Staff Ticket Queue — GET /api/tickets/staff-queue (F-04)
 // ---------------------------------------------------------------------------
-app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (_req: Request, res: Response) => {
-  return res.status(200).json({ data: [] });
+app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+
+    // Pagination
+    const pageRaw = req.query.page;
+    const page = pageRaw ? parseInt(String(pageRaw), 10) : 1;
+    if (isNaN(page) || page < 1) {
+      return res.status(400).json({ error: { code: "INVALID_QUERY", message: "page must be an integer >= 1." } });
+    }
+
+    const pageSizeRaw = req.query.pageSize;
+    const pageSize = pageSizeRaw ? parseInt(String(pageSizeRaw), 10) : 10;
+    if (isNaN(pageSize) || ![10, 25, 50].includes(pageSize)) {
+      return res.status(400).json({ error: { code: "INVALID_QUERY", message: "pageSize must be 10, 25, or 50." } });
+    }
+
+    // Sorting
+    const sortByRaw = req.query.sortBy;
+    const sortBy = sortByRaw ? String(sortByRaw) : "createdAt";
+    const sortOrderRaw = req.query.sortOrder || req.query.sortDirection;
+    const sortOrder = sortOrderRaw ? String(sortOrderRaw).toLowerCase() : "desc";
+    const isAsc = sortOrder === "asc";
+
+    // Filtering
+    const search = req.query.search ? String(req.query.search).trim() : undefined;
+    const statusFilter = req.query.status ? String(req.query.status).trim() : undefined;
+    const itPriorityFilter = req.query.itPriority ? String(req.query.itPriority).trim() : undefined;
+    const assignmentFilter = req.query.assignment ? String(req.query.assignment).trim().toLowerCase() : undefined;
+
+    const assignedToIdRaw = req.query.assignedToId;
+    let assignedToIdFilter: number | null | undefined = undefined;
+    if (assignedToIdRaw !== undefined) {
+      if (String(assignedToIdRaw).toLowerCase() === "unassigned") {
+        assignedToIdFilter = null;
+      } else {
+        const parsed = parseInt(String(assignedToIdRaw), 10);
+        if (!isNaN(parsed)) assignedToIdFilter = parsed;
+      }
+    }
+
+    const categoryIdRaw = req.query.categoryId;
+    let categoryIdFilter: number | undefined = undefined;
+    if (categoryIdRaw !== undefined) {
+      const parsed = parseInt(String(categoryIdRaw), 10);
+      if (!isNaN(parsed)) categoryIdFilter = parsed;
+    }
+
+    const relatedSystemIdRaw = req.query.relatedSystemId;
+    let relatedSystemIdFilter: number | undefined = undefined;
+    if (relatedSystemIdRaw !== undefined) {
+      const parsed = parseInt(String(relatedSystemIdRaw), 10);
+      if (!isNaN(parsed)) relatedSystemIdFilter = parsed;
+    }
+
+    // Build Where Clause
+    const whereClause: any = {};
+
+    if (search) {
+      whereClause.OR = [
+        { ticketNumber: { contains: search, mode: "insensitive" } },
+        { summary: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { requester: { name: { contains: search, mode: "insensitive" } } },
+        { requester: { email: { contains: search, mode: "insensitive" } } },
+      ];
+    }
+
+    if (statusFilter) {
+      whereClause.currentStatus = { equals: statusFilter, mode: "insensitive" };
+    }
+
+    if (itPriorityFilter) {
+      if (["NONE", "UNASSIGNED", "NULL"].includes(itPriorityFilter.toUpperCase())) {
+        whereClause.itPriority = null;
+      } else {
+        whereClause.itPriority = { equals: itPriorityFilter, mode: "insensitive" };
+      }
+    }
+
+    if (assignmentFilter === "unassigned") {
+      whereClause.assignedToId = null;
+    } else if (assignmentFilter === "me") {
+      whereClause.assignedToId = sessionUser.id;
+    } else if (assignmentFilter === "assigned") {
+      whereClause.assignedToId = { not: null };
+    } else if (assignedToIdFilter !== undefined) {
+      whereClause.assignedToId = assignedToIdFilter;
+    }
+
+    if (categoryIdFilter !== undefined) {
+      whereClause.categoryId = categoryIdFilter;
+    }
+
+    if (relatedSystemIdFilter !== undefined) {
+      whereClause.relatedSystemId = relatedSystemIdFilter;
+    }
+
+    const rawTickets = await prisma.ticket.findMany({
+      where: whereClause,
+      include: {
+        category: { select: { id: true, name: true } },
+        relatedSystem: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
+        _count: {
+          select: {
+            attachments: { where: { isDeleted: false } },
+            publicComments: true,
+            internalNotes: true,
+          },
+        },
+      },
+    });
+
+    // Custom Sorting for Staff Queue
+    const compareItPriority = (pA: string | null | undefined, pB: string | null | undefined, isAscending: boolean): number => {
+      if (!pA && !pB) return 0;
+      if (!pA) return 1;
+      if (!pB) return -1;
+      const getRank = (p: string): number => {
+        const up = p.toLowerCase();
+        if (up === "urgent") return 1;
+        if (up === "high") return 2;
+        if (up === "medium") return 3;
+        if (up === "low") return 4;
+        return 5;
+      };
+      return isAscending ? getRank(pB) - getRank(pA) : getRank(pA) - getRank(pB);
+    };
+
+    const compareStatus = (sA: string | null | undefined, sB: string | null | undefined, isAscending: boolean): number => {
+      const getRank = (s: string | null | undefined): number => {
+        if (!s) return 10;
+        const lower = s.toLowerCase();
+        if (lower === "new") return 1;
+        if (lower === "open") return 2;
+        if (lower === "in progress") return 3;
+        if (lower === "waiting for requester") return 4;
+        if (lower === "pending verification") return 5;
+        if (lower === "reopened") return 6;
+        if (lower === "resolved") return 7;
+        if (lower === "closed") return 8;
+        if (lower === "cancelled") return 9;
+        return 10;
+      };
+      return isAscending ? getRank(sA) - getRank(sB) : getRank(sB) - getRank(sA);
+    };
+
+    const compareCreatedAt = (cA: Date, cB: Date, isAscending: boolean): number => {
+      const diff = new Date(cA).getTime() - new Date(cB).getTime();
+      return isAscending ? diff : -diff;
+    };
+
+    rawTickets.sort((a, b) => {
+      let comp = 0;
+      if (sortBy === "itPriority") {
+        comp = compareItPriority(a.itPriority, b.itPriority, isAsc);
+      } else if (sortBy === "currentStatus" || sortBy === "status") {
+        comp = compareStatus(a.currentStatus, b.currentStatus, isAsc);
+      } else {
+        comp = compareCreatedAt(a.createdAt, b.createdAt, isAsc);
+      }
+
+      if (comp !== 0) return comp;
+      return a.ticketNumber.localeCompare(b.ticketNumber);
+    });
+
+    const total = rawTickets.length;
+    const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
+    const startIndex = (page - 1) * pageSize;
+    const paginated = rawTickets.slice(startIndex, startIndex + pageSize);
+
+    const meta = {
+      total,
+      page,
+      pageSize,
+      totalPages,
+      hasPreviousPage: page > 1,
+      hasNextPage: page < totalPages,
+    };
+
+    return res.status(200).json({
+      data: paginated,
+      meta,
+      pagination: meta,
+    });
+  } catch (error) {
+    console.error("Error loading staff queue:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to load staff queue." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Claim Ticket API — PATCH /api/tickets/:id/claim (F-04)
+// ---------------------------------------------------------------------------
+app.patch("/api/tickets/:id/claim", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    if (ticket.assignedToId && ticket.assignedToId !== sessionUser.id && sessionUser.role !== "ADMINISTRATOR") {
+      return res.status(409).json({
+        error: {
+          code: "TICKET_ALREADY_ASSIGNED",
+          message: "This ticket has already been claimed by another IT staff member.",
+        },
+      });
+    }
+
+    const nextStatus = ticket.currentStatus === "New" ? "Open" : ticket.currentStatus;
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        assignedToId: sessionUser.id,
+        currentStatus: nextStatus,
+      },
+      include: {
+        category: { select: { id: true, name: true } },
+        relatedSystem: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return res.status(200).json({ data: updated, ...updated });
+  } catch (error) {
+    console.error("Error claiming ticket:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to claim ticket." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Assign Ticket API — PATCH /api/tickets/:id/assign (F-04)
+// ---------------------------------------------------------------------------
+app.patch("/api/tickets/:id/assign", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const { assignedToId } = req.body;
+    let targetStaffId: number | null = null;
+
+    if (assignedToId !== null && assignedToId !== undefined) {
+      targetStaffId = parseInt(String(assignedToId), 10);
+      if (isNaN(targetStaffId)) {
+        return res.status(422).json({
+          error: { code: "VALIDATION_ERROR", message: "assignedToId must be a valid integer or null." },
+        });
+      }
+
+      const targetUser = await prisma.user.findUnique({ where: { id: targetStaffId } });
+      if (!targetUser || !targetUser.isActive || !["IT_STAFF", "ADMINISTRATOR"].includes(targetUser.role)) {
+        return res.status(422).json({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Assigned user does not exist, is inactive, or is not an IT staff member.",
+          },
+        });
+      }
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    const nextStatus = (targetStaffId !== null && ticket.currentStatus === "New") ? "Open" : ticket.currentStatus;
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        assignedToId: targetStaffId,
+        currentStatus: nextStatus,
+      },
+      include: {
+        category: { select: { id: true, name: true } },
+        relatedSystem: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return res.status(200).json({ data: updated, ...updated });
+  } catch (error) {
+    console.error("Error assigning ticket:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to assign ticket." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Set IT Priority API — PATCH /api/tickets/:id/priority (F-04)
+// ---------------------------------------------------------------------------
+app.patch("/api/tickets/:id/priority", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const { itPriority } = req.body;
+    let normalizedPriority: string | null = null;
+
+    if (itPriority !== null && itPriority !== undefined) {
+      const prioStr = String(itPriority).trim();
+      const ALLOWED = ["Urgent", "High", "Medium", "Low"];
+      const match = ALLOWED.find((p) => p.toLowerCase() === prioStr.toLowerCase());
+
+      if (!match) {
+        return res.status(422).json({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "itPriority must be one of Urgent, High, Medium, Low, or null.",
+          },
+        });
+      }
+      normalizedPriority = match;
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { itPriority: normalizedPriority },
+      include: {
+        category: { select: { id: true, name: true } },
+        relatedSystem: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return res.status(200).json({ data: updated, ...updated });
+  } catch (error) {
+    console.error("Error updating IT priority:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to update IT priority." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Update Ticket Status API — PATCH /api/tickets/:id/status (F-04)
+// ---------------------------------------------------------------------------
+app.patch("/api/tickets/:id/status", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const ticketId = parseInt(req.params.id, 10);
+
+    if (isNaN(ticketId) || ticketId < 1) {
+      return res.status(400).json({
+        error: { code: "INVALID_QUERY", message: "Invalid ticket ID parameter." },
+      });
+    }
+
+    const { status } = req.body;
+    if (!status) {
+      return res.status(422).json({
+        error: { code: "VALIDATION_ERROR", message: "Status is required." },
+      });
+    }
+
+    const ALLOWED_STATUSES = [
+      "New",
+      "Open",
+      "In Progress",
+      "Waiting for Requester",
+      "Pending Verification",
+      "Resolved",
+      "Closed",
+      "Reopened",
+      "Cancelled",
+    ];
+
+    const matchStatus = ALLOWED_STATUSES.find((s) => s.toLowerCase() === String(status).trim().toLowerCase());
+    if (!matchStatus) {
+      return res.status(422).json({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: `Invalid status value. Allowed statuses: ${ALLOWED_STATUSES.join(", ")}`,
+        },
+      });
+    }
+
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) {
+      return res.status(404).json({
+        error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
+      });
+    }
+
+    let isRequesterResolved = ticket.isRequesterResolved;
+    if (ticket.currentStatus === "Pending Verification" && matchStatus !== "Pending Verification") {
+      isRequesterResolved = false;
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        currentStatus: matchStatus,
+        isRequesterResolved,
+      },
+      include: {
+        category: { select: { id: true, name: true } },
+        relatedSystem: { select: { id: true, name: true } },
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return res.status(200).json({ data: updated, ...updated });
+  } catch (error) {
+    console.error("Error updating ticket status:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to update status." },
+    });
+  }
 });
 
 // ---------------------------------------------------------------------------
