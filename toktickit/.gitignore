@@ -34,6 +34,7 @@ Thumbs.db
 
 # Lab Sheets (For context this is used by ai to double check the docs incase too much info was lost in my extraction, all the initial docs weren't created with tihs as the context)
 docs/lab-02/Lab_02_labsheet.md
+docs/lab-03/Lab_3_sheet.md
 
 # Backups and temporary files
 docs/lab-02BackUp.zip
