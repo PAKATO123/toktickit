@@ -20,6 +20,14 @@
 |    | lab3-PostImplementationCleanup1 | Approved |
 
 
+**Branch  9 - feature/lab03-08-staff-ticket-detail-ui**
+https://github.com/PAKATO123/toktickit/pull/47
+| Verdict | Request changes |
+Reviewer comment I received: Request changes — staff cannot open attachments
+
+How I responded: Will be addressed in cleanup branch
+
+
 **Branch 11 - feature/lab03-10-e2e-and-docs**
 https://github.com/PAKATO123/toktickit/pull/49
 | Verdict | Approved* |
@@ -31,9 +39,13 @@ IT Priority Dropdown UI passes uppercase (HIGH, URGENT) while the specs defines 
 
 Password change modal overlay blocks header navigation and sign-out button.
 
-How I responded: Will be addressed in next cleanup branch
+How I responded: Addressed in lab3-PostImplementationCleanup1 cleanup branch.
 
 ## Pull Requests I reviewed for my partner
-My comment:
+https://github.com/Tammathorn/toktickit/pull/46
+My comment: I recommend clarifying one edge case
+Comments on Terminal Tickets, The status transition matrix strictly defines CLOSED and CANCELLED as terminal states.
+but Business Rule 68 broadly allows the owning Requester, IT Staff, and Administrator to post Public Comments on a Ticket without mentioning status constraints.
+You should maybe clarify if the users are still allowed to write comments to a ticket still after the ticket is closed.
 
-Partner's response:
+Partner's response: Thanks, good catch. I've settled it as C-109: Closed and Cancelled tickets are read-only for everyone. No comments, notes, attachment changes, or owner/priority/status changes (409). Reading still works. Since C-98 makes both statuses terminal, the Requester opens a new ticket instead. Resolved can still take comments because it can be reopened.
