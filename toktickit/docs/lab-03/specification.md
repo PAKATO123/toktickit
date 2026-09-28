@@ -183,8 +183,7 @@ Replace the temporary Development Requester selector from Lab 2 with secure auth
 | `GET /api/tickets/:id/comments` | Owned Only | All Tickets | All Tickets |
 | `POST /api/tickets/:id/comments` | Owned Only | All Tickets | All Tickets |
 | `GET /api/tickets/:id/notes` | Forbidden (403) | Permitted | Permitted |
-| `POST /api/tickets/:id/notes` | Forbidden (403) | Permitted | Permitted |
-| `GET /api/users` | Forbidden (403) | Forbidden (403) | Permitted |
+| `GET /api/users` | Forbidden (403) | Permitted (Staff List) | Permitted |
 | `POST /api/users` | Forbidden (403) | Forbidden (403) | Permitted |
 | `PUT/PATCH /api/users/:id` | Forbidden (403) | Forbidden (403) | Permitted |
 | `POST /api/users/:id/reset-password` | Forbidden (403) | Forbidden (403) | Permitted |
@@ -194,7 +193,7 @@ Replace the temporary Development Requester selector from Lab 2 with secure auth
 
 ### Ticket Ownership, Priority, and Status Workflow
 - **BR-08: Ticket Ownership**  
-  A Ticket has one Requester owner (creator) and zero or one assigned IT Staff owner (`assignedToId`). The assigned owner must be an active user with `IT_STAFF` or `ADMINISTRATOR` role.
+  A Ticket has one Requester owner (creator) and zero or one assigned IT Staff owner (`assignedToId`). The assignee options strictly consist of active users with the `IT_STAFF` role (excluding customers/requesters, administrators, and inactive staff members). Any IT Staff member claiming or re-claiming a ticket assigns ownership directly to themselves.
 - **BR-09: IT Priority Defaults & Modification**  
   When a Ticket is created, `itPriority` is initialized to the value of `requestedPriority` (or `Medium` if `requestedPriority` was omitted). `requestedPriority` remains immutable after creation. `itPriority` can only be changed by IT Staff or Administrators.
 - **BR-10: Ticket Status State Machine & Permitted Transitions**  
@@ -390,12 +389,12 @@ Primary API Routes:
 
 ## 10. Product Definition of Done
 
-- [ ] All code for authentication, mandatory password change, IT Staff queue, IT Staff ticket detail, public comments, internal notes, and user management is implemented.
-- [ ] Database schema is updated and migrated; seed data is idempotent and fully populated.
-- [ ] All unit tests, API integration tests, UI tests, and Playwright E2E tests pass cleanly.
-- [ ] Direct API authorization tests verify server-side security on every protected route.
-- [ ] Responsive design verified on desktop (1440px), tablet (768px), and mobile (375px) viewports using Zen Green theme tokens.
-- [ ] Engineering contract docs (`specification.md`, `ui-spec.md`, `api-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md`) are complete and consistent.
+- [x] All code for authentication, mandatory password change, IT Staff queue, IT Staff ticket detail, public comments, internal notes, and user management is implemented.
+- [x] Database schema is updated and migrated; seed data is idempotent and fully populated.
+- [x] All unit tests, API integration tests, UI tests, and Playwright E2E tests pass cleanly.
+- [x] Direct API authorization tests verify server-side security on every protected route.
+- [x] Responsive design verified on desktop (1440px), tablet (768px), and mobile (375px) viewports using Zen Green theme tokens.
+- [x] Engineering contract docs (`specification.md`, `ui-spec.md`, `api-spec.md`, `tests.md`, `reviewer.md`, `ai-use.md`) are complete and consistent.
 
 ---
 

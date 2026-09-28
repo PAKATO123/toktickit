@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
+import { useAuth } from "../context/AuthContext";
 import { getCategories, getRelatedSystems, Category, RelatedSystem, API_BASE_URL } from "../api";
 
 export interface TicketListItem {
@@ -25,7 +26,15 @@ export interface PaginationMeta {
 
 export const MyTicketsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { selectedRequester } = useRequester();
+
+  // Redirect IT staff / admin to staff queue
+  useEffect(() => {
+    if (user && (user.role === "IT_STAFF" || user.role === "ADMINISTRATOR")) {
+      navigate("/staff/queue", { replace: true });
+    }
+  }, [user, navigate]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);
@@ -78,14 +87,15 @@ export const MyTicketsPage: React.FC = () => {
 
   // Fetch Tickets from API
   const fetchTickets = useCallback(async () => {
-    if (!selectedRequester) return;
+    const currentRequesterId = selectedRequester?.id || user?.id;
+    if (!currentRequesterId) return;
 
     setLoading(true);
     setError(null);
 
     try {
       const params = new URLSearchParams();
-      params.append("requesterId", String(selectedRequester.id));
+      params.append("requesterId", String(currentRequesterId));
       if (debouncedSearch.trim()) params.append("search", debouncedSearch.trim());
       if (statusFilter) params.append("status", statusFilter);
       if (priorityFilter) params.append("priority", priorityFilter);
@@ -96,7 +106,7 @@ export const MyTicketsPage: React.FC = () => {
       params.append("page", String(page));
       params.append("pageSize", String(pageSize));
 
-      const res = await fetch(`${API_BASE_URL}/api/tickets?${params.toString()}`);
+      const res = await fetch(`${API_BASE_URL}/api/tickets?${params.toString()}`, { credentials: "include" });
       const json = await res.json();
 
       if (!res.ok) {
@@ -113,6 +123,7 @@ export const MyTicketsPage: React.FC = () => {
     }
   }, [
     selectedRequester,
+    user,
     debouncedSearch,
     statusFilter,
     priorityFilter,
@@ -196,8 +207,20 @@ export const MyTicketsPage: React.FC = () => {
     if (lower === "new") {
       return <span className="tt-badge tt-badge-new">New</span>;
     }
+    if (lower === "open") {
+      return <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED" }}>Open</span>;
+    }
     if (lower === "in progress") {
       return <span className="tt-badge tt-badge-medium">In Progress</span>;
+    }
+    if (lower === "waiting for requester") {
+      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E" }}>Waiting for Requester</span>;
+    }
+    if (lower === "pending verification") {
+      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>Pending Verification</span>;
+    }
+    if (lower === "reopened") {
+      return <span className="tt-badge" style={{ backgroundColor: "#FEE2E2", color: "#991B1B", border: "1px solid #F87171" }}>Reopened</span>;
     }
     if (lower === "resolved") {
       return (
@@ -218,6 +241,9 @@ export const MyTicketsPage: React.FC = () => {
           Closed
         </span>
       );
+    }
+    if (lower === "cancelled") {
+      return <span className="tt-badge" style={{ backgroundColor: "#E2E8F0", color: "#718096", border: "1px solid #A0AEC0" }}>Cancelled</span>;
     }
     return <span className="tt-badge">{status}</span>;
   };
