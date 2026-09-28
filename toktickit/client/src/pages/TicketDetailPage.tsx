@@ -1122,13 +1122,38 @@ export const TicketDetailPage: React.FC = () => {
                       onChange={(e) => handleAssignTicket(e.target.value ? Number(e.target.value) : null)}
                     >
                       <option value="">Unassigned</option>
-                      {staffUsers
-                        .filter((u) => u.role === "IT_STAFF" && u.isActive)
-                        .map((u) => (
+                      {(() => {
+                        const optionsMap = new Map<number, { id: number; name: string; role: string }>();
+
+                        // Active IT Staff
+                        staffUsers.forEach((u) => {
+                          if (u.role === "IT_STAFF" && u.isActive) {
+                            optionsMap.set(u.id, { id: u.id, name: u.name, role: u.role });
+                          }
+                        });
+
+                        // Logged-in Admin user can assign to self
+                        if (user?.role === "ADMINISTRATOR") {
+                          optionsMap.set(user.id, { id: user.id, name: user.name, role: user.role });
+                        }
+
+                        // Currently assigned user (even if Admin) so dropdown shows assigned user properly
+                        if (ticket.assignedTo) {
+                          const existing = optionsMap.get(ticket.assignedTo.id);
+                          const assignedRole = (ticket.assignedTo as any).role || existing?.role || "IT_STAFF";
+                          optionsMap.set(ticket.assignedTo.id, {
+                            id: ticket.assignedTo.id,
+                            name: ticket.assignedTo.name,
+                            role: assignedRole,
+                          });
+                        }
+
+                        return Array.from(optionsMap.values()).map((u) => (
                           <option key={u.id} value={u.id}>
-                            {u.name}
+                            {u.name} {u.role === "ADMINISTRATOR" ? "(Admin)" : ""}
                           </option>
-                        ))}
+                        ));
+                      })()}
                     </select>
                   </div>
 

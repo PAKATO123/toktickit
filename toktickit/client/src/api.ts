@@ -487,3 +487,98 @@ export async function getStaffUsers(): Promise<UserOption[]> {
   }
   return json.data || [];
 }
+
+export interface UserAdminListItem {
+  id: number;
+  email: string;
+  name: string;
+  role: "REQUESTER" | "IT_STAFF" | "ADMINISTRATOR";
+  isActive: boolean;
+  mustChangePassword: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export async function getUsersList(params?: {
+  search?: string;
+  role?: string;
+  isActive?: boolean;
+}): Promise<UserAdminListItem[]> {
+  const query = new URLSearchParams();
+  if (params?.search) query.append("search", params.search);
+  if (params?.role) query.append("role", params.role);
+  if (params?.isActive !== undefined) query.append("isActive", String(params.isActive));
+
+  const url = `${API_BASE_URL}/api/users${query.toString() ? `?${query.toString()}` : ""}`;
+  const res = await fetch(url, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to load users list.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data || [];
+}
+
+export async function createUserAccount(data: {
+  name: string;
+  email: string;
+  role: string;
+  initialPassword: string;
+}): Promise<UserAdminListItem> {
+  const res = await fetch(`${API_BASE_URL}/api/users`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to create user account.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.user || json.data;
+}
+
+export async function updateUserAccount(
+  id: number,
+  data: { name?: string; email?: string; role?: string; isActive?: boolean }
+): Promise<UserAdminListItem> {
+  const res = await fetch(`${API_BASE_URL}/api/users/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to update user account.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.user || json.data;
+}
+
+export async function resetUserInitialPassword(
+  id: number,
+  initialPassword: string
+): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/users/${id}/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ initialPassword }),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to reset initial password.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+}
+

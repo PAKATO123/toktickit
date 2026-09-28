@@ -650,7 +650,7 @@ app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINI
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
         _count: {
           select: {
             attachments: { where: { isDeleted: false } },
@@ -775,7 +775,7 @@ app.patch("/api/tickets/:id/claim", requireAuth, requireRole("IT_STAFF", "ADMINI
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
       },
     });
 
@@ -843,7 +843,7 @@ app.patch("/api/tickets/:id/assign", requireAuth, requireRole("IT_STAFF", "ADMIN
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
       },
     });
 
@@ -903,7 +903,7 @@ app.patch("/api/tickets/:id/priority", requireAuth, requireRole("IT_STAFF", "ADM
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
       },
     });
 
@@ -981,7 +981,7 @@ app.patch("/api/tickets/:id/status", requireAuth, requireRole("IT_STAFF", "ADMIN
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
       },
     });
 
@@ -1020,7 +1020,7 @@ app.get("/api/tickets/:id", requireAuth, async (req: Request, res: Response) => 
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
         attachments: {
           select: {
             id: true,
@@ -1106,7 +1106,7 @@ app.patch("/api/tickets/:id/resolve-indication", requireAuth, requireRole("REQUE
         category: { select: { id: true, name: true } },
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true, email: true, role: true } },
         attachments: {
           select: {
             id: true,
@@ -1812,6 +1812,240 @@ app.get("/api/users", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), asy
     console.error("Error loading users list:", error);
     return res.status(500).json({
       error: { code: "INTERNAL_ERROR", message: "Unable to load users list." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Create User Account — POST /api/users
+// ---------------------------------------------------------------------------
+app.post("/api/users", requireAuth, requireRole("ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const { name, email, role, initialPassword } = req.body;
+
+    if (!name || !email || !role || !initialPassword) {
+      return res.status(400).json({
+        error: { code: "MISSING_FIELDS", message: "Name, email, role, and initial password are required." },
+      });
+    }
+
+    const trimmedEmail = String(email).trim().toLowerCase();
+    const trimmedRole = String(role).trim().toUpperCase();
+
+    if (!["REQUESTER", "IT_STAFF", "ADMINISTRATOR"].includes(trimmedRole)) {
+      return res.status(400).json({
+        error: { code: "INVALID_ROLE", message: "Invalid user role specified." },
+      });
+    }
+
+    const prisma = getPrisma();
+    const existingUser = await prisma.user.findUnique({
+      where: { email: trimmedEmail },
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
+        error: { code: "EMAIL_ALREADY_EXISTS", message: "An account with this email address already exists." },
+      });
+    }
+
+    if (!isPasswordComplex(String(initialPassword))) {
+      return res.status(400).json({
+        error: {
+          code: "WEAK_PASSWORD",
+          message: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.",
+        },
+      });
+    }
+
+    const newUser = await prisma.user.create({
+      data: {
+        name: String(name).trim(),
+        email: trimmedEmail,
+        role: trimmedRole as any,
+        passwordHash: bcrypt.hashSync(String(initialPassword), 10),
+        isActive: true,
+        mustChangePassword: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        createdAt: true,
+      },
+    });
+
+    return res.status(201).json({ user: newUser, data: newUser });
+  } catch (error) {
+    console.error("Error creating user account:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to create user account." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Update User Details / Role / Status — PATCH /api/users/:id
+// ---------------------------------------------------------------------------
+app.patch("/api/users/:id", requireAuth, requireRole("ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        error: { code: "INVALID_INPUT", message: "Invalid user ID." },
+      });
+    }
+
+    const prisma = getPrisma();
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        error: { code: "USER_NOT_FOUND", message: "User account not found." },
+      });
+    }
+
+    const { name, email, role, isActive } = req.body;
+    const updateData: any = {};
+
+    if (email !== undefined && String(email).trim().toLowerCase() !== targetUser.email.toLowerCase()) {
+      const trimmedEmail = String(email).trim().toLowerCase();
+      const existingUser = await prisma.user.findUnique({
+        where: { email: trimmedEmail },
+      });
+      if (existingUser) {
+        return res.status(409).json({
+          error: { code: "EMAIL_ALREADY_EXISTS", message: "An account with this email address already exists." },
+        });
+      }
+      updateData.email = trimmedEmail;
+    }
+
+    if (name !== undefined) {
+      updateData.name = String(name).trim();
+    }
+
+    if (role !== undefined) {
+      const trimmedRole = String(role).trim().toUpperCase();
+      if (!["REQUESTER", "IT_STAFF", "ADMINISTRATOR"].includes(trimmedRole)) {
+        return res.status(400).json({
+          error: { code: "INVALID_ROLE", message: "Invalid user role specified." },
+        });
+      }
+      updateData.role = trimmedRole;
+    }
+
+    if (isActive !== undefined) {
+      updateData.isActive = Boolean(isActive);
+    }
+
+    // BR-18: Admin Self-Deactivation Guard
+    const currentAdminId = (req.session as any)?.user?.id;
+    if (updateData.isActive === false && targetUser.id === currentAdminId) {
+      return res.status(400).json({
+        error: {
+          code: "SELF_DEACTIVATION_PROHIBITED",
+          message: "Administrators cannot deactivate their own active account.",
+        },
+      });
+    }
+
+    // BR-19: Minimum Active Admin Guard
+    const isDeactivatingAdmin = targetUser.role === "ADMINISTRATOR" && targetUser.isActive && updateData.isActive === false;
+    const isChangingAdminRole = targetUser.role === "ADMINISTRATOR" && targetUser.isActive && updateData.role && updateData.role !== "ADMINISTRATOR";
+
+    if (isDeactivatingAdmin || isChangingAdminRole) {
+      const activeAdminCount = await prisma.user.count({
+        where: { role: "ADMINISTRATOR", isActive: true },
+      });
+      if (activeAdminCount <= 1) {
+        return res.status(400).json({
+          error: {
+            code: "LAST_ADMIN_PROTECTED",
+            message: "Cannot deactivate or change the role of the last active Administrator.",
+          },
+        });
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return res.status(200).json({ user: updatedUser, data: updatedUser });
+  } catch (error) {
+    console.error("Error updating user account:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to update user account." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Reset User Initial Password — POST /api/users/:id/reset-password
+// ---------------------------------------------------------------------------
+app.post("/api/users/:id/reset-password", requireAuth, requireRole("ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (isNaN(userId)) {
+      return res.status(400).json({
+        error: { code: "INVALID_INPUT", message: "Invalid user ID." },
+      });
+    }
+
+    const prisma = getPrisma();
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!targetUser) {
+      return res.status(404).json({
+        error: { code: "USER_NOT_FOUND", message: "User account not found." },
+      });
+    }
+
+    const { initialPassword } = req.body;
+    if (!initialPassword || !isPasswordComplex(String(initialPassword))) {
+      return res.status(400).json({
+        error: {
+          code: "WEAK_PASSWORD",
+          message: "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, and one number.",
+        },
+      });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: bcrypt.hashSync(String(initialPassword), 10),
+        mustChangePassword: true,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Initial password set successfully",
+      mustChangePassword: true,
+    });
+  } catch (error) {
+    console.error("Error resetting initial password:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to reset initial password." },
     });
   }
 });

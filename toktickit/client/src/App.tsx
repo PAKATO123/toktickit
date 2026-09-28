@@ -9,6 +9,8 @@ import MyTicketsPage from "./pages/MyTicketsPage";
 import CreateTicketPage from "./pages/CreateTicketPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import StaffQueuePage from "./pages/StaffQueuePage";
+import AdminGuard from "./components/AdminGuard";
+import { UserManagementPage } from "./pages/UserManagementPage";
 
 export function AppRoutes() {
   return (
@@ -20,6 +22,9 @@ export function AppRoutes() {
           <Route path="tickets/new" element={<CreateTicketPage />} />
           <Route path="tickets/:id" element={<TicketDetailPage />} />
           <Route path="staff/queue" element={<StaffQueuePage />} />
+          <Route element={<AdminGuard />}>
+            <Route path="admin/users" element={<UserManagementPage />} />
+          </Route>
         </Route>
       </Route>
     </Routes>

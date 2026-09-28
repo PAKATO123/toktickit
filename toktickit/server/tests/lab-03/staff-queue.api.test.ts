@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
 
 describe("Lab 03 Feature 4 — IT Staff Ticket Queue & Workflow Backend (staff-queue.api.test.ts)", () => {
-  beforeAll(async () => {
+  beforeEach(async () => {
     const prisma = getPrisma();
     // Temporarily set mustChangePassword: false for test staff & admin users
     await prisma.user.updateMany({
