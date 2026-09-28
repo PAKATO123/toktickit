@@ -11,7 +11,7 @@ test.describe("Lab 03 E2E — IT Staff Ticket Queue & Workflow Flow", () => {
       await page.locator("#current-password-input").fill("Password123!");
       await page.locator("#new-password-input").fill("NewPassword123!");
       await page.locator("#confirm-password-input").fill("NewPassword123!");
-      await page.getByRole("button", { name: "Update Password & Continue" }).click();
+      await page.getByRole("button", { name: /Save New Password|Update Password/i }).click();
       await expect(modalHeading).not.toBeVisible();
     }
   };

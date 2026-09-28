@@ -1,14 +1,20 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import request from "supertest";
+import bcrypt from "bcryptjs";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
 
 describe("Lab 03 Feature 3 — Server-Side Authorization Guards (authorization.api.test.ts)", () => {
   beforeEach(async () => {
     const prisma = getPrisma();
-    // Temporarily set mustChangePassword: false for all test users so they can access application APIs
+    const defaultHash = bcrypt.hashSync("Password123!", 10);
+    const adminHash = bcrypt.hashSync("AdminPassword123!", 10);
     await prisma.user.updateMany({
-      data: { mustChangePassword: false },
+      data: { passwordHash: defaultHash, mustChangePassword: false },
+    });
+    await prisma.user.update({
+      where: { email: "admin@toktickit.local" },
+      data: { passwordHash: adminHash, mustChangePassword: false },
     });
   });
 

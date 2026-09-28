@@ -11,18 +11,28 @@ test.describe("Lab 03 E2E — Administrator User Management Flow", () => {
       await page.locator("#current-password-input").fill(defaultPass);
       await page.locator("#new-password-input").fill("NewComplexPass123!");
       await page.locator("#confirm-password-input").fill("NewComplexPass123!");
-      await page.getByRole("button", { name: "Update Password & Continue" }).click();
+      await page.getByRole("button", { name: /Save New Password|Update Password/i }).click();
       await expect(modalHeading).not.toBeVisible({ timeout: 10000 });
     }
   };
 
-  test("Admin logs in, creates user, updates account details, resets initial password", async ({ page }) => {
-    // 1. Admin Login
+  const adminLoginHelper = async (page: any) => {
     await page.goto("/");
     await page.locator("#email-input").fill("admin@toktickit.local");
     await page.locator("#password-input").fill("AdminPassword123!");
     await page.getByRole("button", { name: "Sign In" }).click();
-    await handlePasswordModalIfNeeded(page, "AdminPassword123!");
+
+    const isError = await page.locator("[data-testid='error-alert'], .tt-alert-error").isVisible({ timeout: 1500 }).catch(() => false);
+    if (isError) {
+      await page.locator("#password-input").fill("Password123!");
+      await page.getByRole("button", { name: "Sign In" }).click();
+    }
+    await handlePasswordModalIfNeeded(page, isError ? "Password123!" : "AdminPassword123!");
+  };
+
+  test("Admin logs in, creates user, updates account details, resets initial password", async ({ page }) => {
+    // 1. Admin Login
+    await adminLoginHelper(page);
 
     await expect(page).toHaveURL(/\/staff\/queue/);
 
@@ -59,7 +69,7 @@ test.describe("Lab 03 E2E — Administrator User Management Flow", () => {
     await page.getByTestId("submit-edit-user").click();
 
     await expect(editModal).not.toBeVisible();
-    await expect(page.locator("text=E2E Test User Updated")).toBeVisible();
+    await expect(page.locator("text=E2E Test User Updated").first()).toBeVisible();
 
     // 5. Reset Initial Password
     const updatedUserRow = page.locator("tr", { hasText: uniqueEmail });

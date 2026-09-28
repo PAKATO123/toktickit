@@ -331,6 +331,16 @@ export const TicketDetailPage: React.FC = () => {
   const activeAttachments = ticket?.attachments?.filter((a) => !a.isDeleted) || [];
   const deletedAttachments = ticket?.attachments?.filter((a) => a.isDeleted) || [];
 
+  const formatPriorityText = (priority: string | null): string => {
+    if (!priority) return "Unassigned";
+    const up = priority.toUpperCase();
+    if (up === "URGENT") return "Urgent";
+    if (up === "HIGH") return "High";
+    if (up === "MEDIUM") return "Medium";
+    if (up === "LOW") return "Low";
+    return priority;
+  };
+
   const renderPriorityBadge = (priority: string | null, labelPrefix?: string) => {
     if (!priority) {
       return <span style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>Unassigned</span>;
@@ -344,7 +354,7 @@ export const TicketDetailPage: React.FC = () => {
 
     return (
       <span className={badgeClass}>
-        {labelPrefix ? `${labelPrefix}: ` : ""}{priority}
+        {labelPrefix ? `${labelPrefix}: ` : ""}{formatPriorityText(priority)}
       </span>
     );
   };
@@ -700,7 +710,7 @@ export const TicketDetailPage: React.FC = () => {
                       type="text"
                       className="tt-input tt-readonly"
                       readOnly
-                      value={ticket.requestedPriority || "Unassigned"}
+                      value={formatPriorityText(ticket.requestedPriority)}
                     />
                   </div>
                 </div>
@@ -1179,15 +1189,15 @@ export const TicketDetailPage: React.FC = () => {
                       id="it-priority-select"
                       data-testid="it-priority-select"
                       className="tt-select"
-                      value={ticket.itPriority ? ticket.itPriority.toUpperCase() : ""}
+                      value={ticket.itPriority || ""}
                       disabled={actionLoading}
                       onChange={(e) => handlePriorityChange(e.target.value || null)}
                     >
                       <option value="">Unassigned</option>
-                      <option value="LOW">Low</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HIGH">High</option>
-                      <option value="URGENT">Urgent</option>
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
                     </select>
                   </div>
 
@@ -1201,18 +1211,29 @@ export const TicketDetailPage: React.FC = () => {
                       data-testid="status-select"
                       className="tt-select"
                       value={ticket.currentStatus}
-                      disabled={actionLoading}
+                      disabled={actionLoading || ticket.currentStatus === "Cancelled"}
                       onChange={(e) => handleStatusChange(e.target.value)}
                     >
-                      <option value="New">New</option>
-                      <option value="Open">Open</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Waiting for Requester">Waiting for Requester</option>
-                      <option value="Pending Verification">Pending Verification</option>
-                      <option value="Resolved">Resolved</option>
-                      <option value="Closed">Closed</option>
-                      <option value="Cancelled">Cancelled</option>
-                      <option value="Reopened">Reopened</option>
+                      {(() => {
+                        const PERMITTED_MAP: Record<string, string[]> = {
+                          New: ["Open", "In Progress", "Cancelled"],
+                          Open: ["In Progress", "Waiting for Requester", "Pending Verification", "Resolved", "Cancelled"],
+                          "In Progress": ["Waiting for Requester", "Pending Verification", "Resolved", "Cancelled"],
+                          "Waiting for Requester": ["In Progress", "Pending Verification", "Resolved", "Cancelled"],
+                          "Pending Verification": ["Resolved", "Closed", "In Progress", "Open"],
+                          Resolved: ["Closed", "Reopened"],
+                          Closed: ["Reopened"],
+                          Reopened: ["In Progress", "Pending Verification", "Resolved", "Cancelled"],
+                          Cancelled: [],
+                        };
+                        const nextAllowed = PERMITTED_MAP[ticket.currentStatus] || [];
+                        const allOptions = Array.from(new Set([ticket.currentStatus, ...nextAllowed]));
+                        return allOptions.map((s) => (
+                          <option key={s} value={s}>
+                            {s} {s === ticket.currentStatus ? "(Current)" : ""}
+                          </option>
+                        ));
+                      })()}
                     </select>
                   </div>
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import request from "supertest";
+import bcrypt from "bcryptjs";
 import { app } from "../../src/app.js";
 import { getPrisma } from "../../src/prisma.js";
 
@@ -9,6 +10,18 @@ describe("Lab 03 — Administrator User Management API (users-admin.api.test.ts)
   let createdUserId: number | null = null;
 
   beforeAll(async () => {
+    const prisma = getPrisma();
+    const adminHash = bcrypt.hashSync("AdminPassword123!", 10);
+    const staffHash = bcrypt.hashSync("Password123!", 10);
+    await prisma.user.update({
+      where: { email: "admin@toktickit.local" },
+      data: { passwordHash: adminHash, mustChangePassword: false, isActive: true },
+    });
+    await prisma.user.update({
+      where: { email: "staff1@toktickit.local" },
+      data: { passwordHash: staffHash, mustChangePassword: false, isActive: true },
+    });
+
     adminAgent = request.agent(app);
     await adminAgent
       .post("/api/auth/login")
