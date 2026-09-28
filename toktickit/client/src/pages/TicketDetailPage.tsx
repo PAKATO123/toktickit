@@ -1123,36 +1123,49 @@ export const TicketDetailPage: React.FC = () => {
                     >
                       <option value="">Unassigned</option>
                       {(() => {
-                        const optionsMap = new Map<number, { id: number; name: string; role: string }>();
+                        const optionsMap = new Map<number, { id: number; name: string; email?: string; role: string }>();
 
                         // Active IT Staff
                         staffUsers.forEach((u) => {
                           if (u.role === "IT_STAFF" && u.isActive) {
-                            optionsMap.set(u.id, { id: u.id, name: u.name, role: u.role });
+                            optionsMap.set(u.id, { id: u.id, name: u.name, email: u.email, role: u.role });
                           }
                         });
 
                         // Logged-in Admin user can assign to self
                         if (user?.role === "ADMINISTRATOR") {
-                          optionsMap.set(user.id, { id: user.id, name: user.name, role: user.role });
+                          optionsMap.set(user.id, { id: user.id, name: user.name, email: user.email, role: user.role });
                         }
 
                         // Currently assigned user (even if Admin) so dropdown shows assigned user properly
                         if (ticket.assignedTo) {
                           const existing = optionsMap.get(ticket.assignedTo.id);
                           const assignedRole = (ticket.assignedTo as any).role || existing?.role || "IT_STAFF";
-                          optionsMap.set(ticket.assignedTo.id, {
-                            id: ticket.assignedTo.id,
-                            name: ticket.assignedTo.name,
-                            role: assignedRole,
-                          });
+                          if (assignedRole === "IT_STAFF" || assignedRole === "ADMINISTRATOR") {
+                            optionsMap.set(ticket.assignedTo.id, {
+                              id: ticket.assignedTo.id,
+                              name: ticket.assignedTo.name,
+                              email: (ticket.assignedTo as any).email || existing?.email,
+                              role: assignedRole,
+                            });
+                          }
                         }
 
-                        return Array.from(optionsMap.values()).map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name} {u.role === "ADMINISTRATOR" ? "(Admin)" : ""}
-                          </option>
-                        ));
+                        // Check for duplicate names to disambiguate if needed
+                        const nameCounts = new Map<string, number>();
+                        optionsMap.forEach((val) => {
+                          nameCounts.set(val.name, (nameCounts.get(val.name) || 0) + 1);
+                        });
+
+                        return Array.from(optionsMap.values()).map((u) => {
+                          const hasDuplicateName = (nameCounts.get(u.name) || 0) > 1;
+                          const label = `${u.name}${hasDuplicateName && u.email ? ` (${u.email})` : ""}${u.role === "ADMINISTRATOR" ? " (Admin)" : ""}`;
+                          return (
+                            <option key={u.id} value={u.id}>
+                              {label}
+                            </option>
+                          );
+                        });
                       })()}
                     </select>
                   </div>

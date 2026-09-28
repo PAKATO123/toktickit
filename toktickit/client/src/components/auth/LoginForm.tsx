@@ -83,6 +83,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               Email Address
             </label>
             <input
+              id="email-input"
               type="email"
               className="tt-input"
               data-testid="email-input"
@@ -99,6 +100,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               Password
             </label>
             <input
+              id="password-input"
               type="password"
               className="tt-input"
               data-testid="password-input"
