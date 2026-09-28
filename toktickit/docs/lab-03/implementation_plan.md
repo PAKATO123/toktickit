@@ -17,11 +17,29 @@
 
 ---
 
-## Feature List & Branch Roadmap
+## Feature Roadmap & Status Overview
+
+| Feature | Branch Name | Scope Summary | Status |
+|---|---|---|---|
+| **F-01** | `feature/lab03-01-schema-and-migration` | Database Schema Evolution (`User`, `Role`, `PublicComment`, `InternalNote`), Data Migration, Seed Script | ✅ Merged |
+| **F-02** | `feature/lab03-02-auth-backend` | Authentication Backend, Password Hashing, Session Management (`express-session`), Auth Middleware | ✅ Merged |
+| **F-03** | `feature/lab03-03-authorization-and-requester-refactor` | Server-Side Authorization Guards, Requester Isolation, Resolution Indication Backend | ✅ Merged |
+| **F-04** | `feature/lab03-04-staff-queue-and-workflow-backend` | IT Staff Queue Backend, Claim/Assign API, Status State Machine, Comments & Notes API | ✅ Merged |
+| **F-05** | `feature/lab03-05-auth-ui` | Authentication UI (Login Form, Mandatory Password Change Modal, AppShell with User Context) | ✅ Merged |
+| **F-06** | `feature/lab03-06-requester-resolution-ui` | Requester Resolution Indication UI ("I consider this issue resolved"), Confirmation Modal, Badges | 📤 Pushed |
+| **F-07** | `feature/lab03-07-staff-queue-ui` | IT Staff Ticket Queue Page UI (Search, Status/Priority/Assignment Filters, Sort, Pagination) | 📤 Pushed |
+| **F-08** | `feature/lab03-08-staff-ticket-detail-ui` | IT Staff Ticket Detail View (Claim, Reassign, Status Transition, Public Comments & Internal Notes Feed) | ⏳ Up Next |
+| **F-09** | `feature/lab03-09-admin-users` | Administrator User Management Backend & UI (`/api/users`, User List, Create/Edit Modals, Safety Guards) | 📅 Planned |
+| **F-10** | `feature/lab03-10-e2e-and-docs` | Playwright E2E Testing, Visual Audits, Documentation & Definition of Done Verification | 📅 Planned |
+
+---
+
+## Detailed Feature Specifications
 
 ### F-01 · Database Schema Evolution & Data Migration
 **Prerequisites:** Lab 2 baseline  
-**Branch:** `feature/lab03-01-schema-and-migration`
+**Branch:** `feature/lab03-01-schema-and-migration`  
+**Status:** ✅ Merged
 
 Expand the PostgreSQL Prisma schema and seed script to support real users, authentication, roles, ticket ownership, comments, notes, and status workflow.
 
@@ -51,14 +69,15 @@ Expand the PostgreSQL Prisma schema and seed script to support real users, authe
 
 ### F-02 · Authentication Backend & Auth Middleware
 **Prerequisites:** F-01  
-**Branch:** `feature/lab03-02-auth-backend`
+**Branch:** `feature/lab03-02-auth-backend`  
+**Status:** ✅ Merged
 
 Implement backend session management, credential validation, password hashing, and authentication API endpoints.
 
 **Scope:**
 - Password Hashing: `bcryptjs` with salt rounds >= 10.
 - Auth Middleware & Guards:
-  - Session tracking using HttpOnly cookies (`express-session` or signed session cookie).
+  - Session tracking using HttpOnly cookies (`express-session`).
   - `requireAuth`: Verifies active session, checks `isActive = true`.
   - `requireRole(...roles)`: Enforces role-based route authorization.
   - `requireFirstLoginCompleted`: Redirects/blocks users with `mustChangePassword = true`.
@@ -81,14 +100,15 @@ Implement backend session management, credential validation, password hashing, a
 
 ### F-03 · Server-Side Authorization & Requester Refactoring
 **Prerequisites:** F-02  
-**Branch:** `feature/lab03-03-authorization-and-requester-refactor`
+**Branch:** `feature/lab03-03-authorization-and-requester-refactor`  
+**Status:** ✅ Merged
 
 Refactor Lab 2 Requester endpoints to use session identity and enforce server-side data isolation.
 
 **Scope:**
 - Remove reliance on client-supplied `requesterId` parameters; bind all Requester queries to `req.user.id`.
 - Scoping guards:
-  - `GET /api/tickets/my-tickets`: Returns only tickets where `requesterId === req.user.id`.
+  - `GET /api/tickets`: Returns only tickets where `requesterId === req.user.id`.
   - `POST /api/tickets`: Sets `requesterId = req.user.id` automatically.
   - `GET /api/tickets/:id` & attachments: Rejects cross-requester access with `403 Forbidden`.
 - Requester Resolution Request Endpoint (`PATCH /api/tickets/:id/resolve-indication`):
@@ -108,9 +128,10 @@ Refactor Lab 2 Requester endpoints to use session identity and enforce server-si
 
 ### F-04 · IT Staff Ticket Queue & Workflow Backend
 **Prerequisites:** F-02, F-03  
-**Branch:** `feature/lab03-04-staff-queue-and-workflow-backend`
+**Branch:** `feature/lab03-04-staff-queue-and-workflow-backend`  
+**Status:** ✅ Merged
 
-Implement the shared IT Staff Ticket Queue API, ticket ownership management, priority management, and status state machine workflow.
+Implement the shared IT Staff Ticket Queue API, ticket ownership management, priority management, status state machine workflow, and comments/notes APIs.
 
 **Scope:**
 - Queue Retrieval (`GET /api/tickets/staff-queue`):
@@ -131,158 +152,150 @@ Implement the shared IT Staff Ticket Queue API, ticket ownership management, pri
     - `Pending Verification` ➔ `Resolved` / `Closed` (Staff confirm) OR `In Progress` / `Open` (Staff revert if unsolved, resetting `isRequesterResolved = false`)
     - `Resolved` ➔ `Closed`, `Reopened`
     - `Closed` ➔ `Reopened`
-- API Integration Tests (`server/tests/lab-03/staff-queue.api.test.ts`, `staff-detail.api.test.ts`):
-  - Queue search, filtering, sorting, pagination.
-  - Claim, assign, priority update.
-  - Valid vs invalid status transitions (400 Bad Request).
-  - Staff revert of `Pending Verification` ticket back to `In Progress`.
+- Public Comments & Confidential Internal Notes APIs:
+  - `GET / POST /api/tickets/:id/comments`: Public comments for ticket owner, staff, admin.
+  - `GET / POST /api/tickets/:id/notes`: Confidential notes for staff and admin only (`403` for Requesters).
+- API Integration Tests (`staff-queue.api.test.ts`, `staff-ticket-detail.api.test.ts`, `comments-notes.api.test.ts`).
 
 **Testable when F-04 is done:**
 - `GET /api/tickets/staff-queue` returns paginated system tickets for Staff/Admin, returns `403` for Requester.
 - Ticket claiming and reassignment update `assignedToId`.
 - Invalid status transition (e.g. `New` ➔ `Closed`) returns `400 Bad Request`.
 - Staff revert resets status to `In Progress` and clears `isRequesterResolved`.
-- API test suites pass.
+- All backend integration tests pass.
 
 ---
 
-### F-05 · Public Comments & Confidential Internal Notes Backend
+### F-05 · Authentication & Password Change UI
 **Prerequisites:** F-02, F-03  
-**Branch:** `feature/lab03-05-comments-notes-backend`
+**Branch:** `feature/lab03-05-auth-ui`  
+**Status:** ✅ Merged
 
-Implement append-only Public Comments and confidential Internal Notes API endpoints.
-
-**Scope:**
-- Public Comments API:
-  - `GET /api/tickets/:id/comments`: Returns public comments (Ticket Owner, Staff, Admin).
-  - `POST /api/tickets/:id/comments`: Creates public comment (Ticket Owner, Staff, Admin).
-- Internal Notes API:
-  - `GET /api/tickets/:id/notes`: Returns confidential notes (Staff, Admin only; `403` for Requester).
-  - `POST /api/tickets/:id/notes`: Creates confidential note (Staff, Admin only; `403` for Requester).
-- Validation: Non-empty text, max 2000 chars, automatic author and timestamp binding.
-- API Integration Tests (`server/tests/lab-03/comments-notes.api.test.ts`):
-  - Happy path posting and reading comments/notes.
-  - Rejection of Requester access to Internal Notes (`403 Forbidden`).
-
-**Testable when F-05 is done:**
-- Ticket owners and IT Staff can read/write Public Comments.
-- Calling Internal Notes API as Requester returns `403 Forbidden`.
-- IT Staff and Admins can create and view Internal Notes.
-- `comments-notes.api.test.ts` passes.
-
----
-
-### F-06 · Minimalist Administrator User Management Backend
-**Prerequisites:** F-02  
-**Branch:** `feature/lab03-06-admin-users-backend`
-
-Implement Administrator user administration endpoints and safety guards.
+Implement frontend Login form, Mandatory Password Change modal, and updated Application Shell with user context.
 
 **Scope:**
-- Endpoints (restricted to `ADMINISTRATOR` role; `403` for others):
-  - `GET /api/users`: Returns user list with search (name/email) and role filter.
-  - `POST /api/users`: Creates user account (name, email, role, initial password, sets `mustChangePassword = true`, `isActive = true`). Rejects duplicate email (`409 Conflict`).
-  - `PATCH /api/users/:id`: Updates name, email, role, `isActive`. Enforces safety rules:
-    - Admin self-deactivation guard (`400 Bad Request`).
-    - Last active Admin deactivation guard (`400 Bad Request`).
-  - `POST /api/users/:id/reset-password`: Sets new initial password, forcing `mustChangePassword = true`.
-- API Integration Tests (`server/tests/lab-03/users-admin.api.test.ts`):
-  - User creation, update, password reset.
-  - Duplicate email rejection (`409`).
-  - Self-deactivation and last-admin deactivation rejection (`400`).
-  - Non-Admin access rejection (`403`).
-
-**Testable when F-06 is done:**
-- Admin can list, filter, create, edit users, and reset initial passwords.
-- Non-Admin accessing `/api/users` receives `403 Forbidden`.
-- Duplicate email returns `409 Conflict`.
-- Admin self-deactivation and last-admin deactivation return `400 Bad Request`.
-- `users-admin.api.test.ts` passes.
-
----
-
-### F-07 · Authentication & Password Change UI (Zen Green Shell)
-**Prerequisites:** F-02, F-03  
-**Branch:** `feature/lab03-07-auth-ui-and-shell`
-
-Implement the frontend Login screen, Mandatory Password Change modal, and updated Application Shell.
-
-**Scope:**
-- Login Screen (`/login`): Email & Password fields, error alert banner, session state setup.
-- Mandatory Password Change Modal (`/change-password`): Displays automatically when `mustChangePassword = true`, blocks normal app access until valid new password is saved, real-time password rule checklist.
-- Application Shell Update:
-  - Replaces Lab 2 `Development Requester` dropdown with active user display (`Name [Role]`).
-  - Navigation tabs filtered by role (`Requester`: My Tickets, Create Ticket; `IT Staff`: Queue; `Admin`: User Management, Queue).
-  - User profile menu with "Change Password" and "Sign Out" actions.
+- Login Form (`LoginForm.tsx`): Email/Password input fields, error alert banner.
+- Mandatory Password Change Modal (`ChangePasswordModal.tsx`): Non-dismissible modal when `mustChangePassword = true`, real-time password complexity checklist.
+- Application Shell Update (`AppShell.tsx`):
+  - Active user display badge (`Name (Role)`).
+  - Navigation tabs filtered by user role.
+  - Sign Out action clearing session state.
 - Component Tests (`client/src/lab-03/__tests__/Login.test.tsx`, `ChangePassword.test.tsx`).
 
-**Testable when F-07 is done:**
+**Testable when F-05 is done:**
 - Logging in with valid credentials opens the role-based shell.
 - User requiring password change sees non-dismissible modal until saved.
-- Logout clears context and redirects to `/login`.
+- Logout clears context and returns to login form.
 - Component tests pass.
 
 ---
 
-### F-08 · IT Staff Ticket Queue & Detail UI
-**Prerequisites:** F-04, F-05, F-07  
-**Branch:** `feature/lab03-08-staff-queue-detail-ui`
+### F-06 · Requester Resolution Indication UI & Status Display Updates
+**Prerequisites:** F-03, F-05  
+**Branch:** `feature/lab03-06-requester-resolution-ui`  
+**Status:** 📤 Pushed
 
-Build the IT Staff Ticket Queue screen and Ticket Detail management views.
+Build the Requester resolution indication UI button, confirmation modal, and status badge updates.
+
+**Scope:**
+- Action Button & Modal (`TicketDetailPage.tsx`):
+  - "I consider this issue resolved" button (`data-testid="request-resolution-button"`).
+  - Confirmation modal (`data-testid="resolution-confirmation-modal"`) with `[Cancel]` and `[Yes, Mark as Resolved]`.
+- Disabled State:
+  - Displays disabled "Resolution Requested ✓" badge (`data-testid="resolution-requested-badge"`).
+- Status Badges:
+  - Yellow `Pending Verification` badge on ticket detail view and `/tickets` list.
+  - Styled `Cancelled` status badge (`border: 1px solid #A0AEC0`, `backgroundColor: #E2E8F0`).
+- Post-Authentication Navigation Fixes:
+  - Automatically redirects authenticated users away from root `/` selector to `/tickets` or `/staff/queue`.
+
+**Testable when F-06 is done:**
+- Requester can indicate resolution on owned active tickets.
+- Confirmation modal opens and updates status to `Pending Verification`.
+- Resolution button updates to disabled "Resolution Requested ✓" badge.
+- Navigation redirects authenticated users to `/tickets` seamlessly.
+
+---
+
+### F-07 · IT Staff Ticket Queue & Filter Bar UI
+**Prerequisites:** F-04, F-05  
+**Branch:** `feature/lab03-07-staff-queue-ui`  
+**Status:** 📤 Pushed
+
+Build the dedicated IT Staff Ticket Queue page (`/staff/queue`).
 
 **Scope:**
 - Ticket Queue View (`/staff/queue`):
-  - Search bar (number, summary, description).
-  - Status, IT Priority, and Assignment filter dropdowns.
-  - Table with status/priority badges, assignee column, sorting, and pagination footer.
-- Ticket Detail View (`/staff/tickets/:id`):
-  - Sidebar: Claim button, Reassign dropdown, IT Priority selector, Status transition dropdown.
-  - `Pending Verification` status support: Displays "Confirm Resolution" and "Revert to In Progress" buttons for Staff.
-  - Tabbed activity feed: Public Comments feed + Confidential Internal Notes feed (yellow tint card).
-- Requester Resolution Panel (on Requester ticket detail):
-  - "Mark as Resolved" button.
-  - Confirmation popup modal: *"Are you sure you want to mark this problem as resolved?"* `[Cancel]` `[Confirm]`.
-  - Once confirmed, ticket status becomes `Pending Verification` and button becomes disabled/greyed-out showing `"Resolution Requested ✓"`.
-- Component Tests (`client/src/lab-03/__tests__/StaffQueue.test.tsx`, `StaffDetail.test.tsx`).
+  - Search bar (matching ticket number, summary, description).
+  - Filter bar: Status dropdown, IT Priority dropdown, Assignment filter (`All`, `Unassigned`, `Assigned to Me`).
+  - Data table: Ticket #, Requester Name, Category, Related System, IT Priority badge, Status badge, Assignee column, Submission timestamp.
+  - Sorting headers (Ticket #, Priority, Status, Date) and pagination controls (page size selector, prev/next).
+- Component Tests (`client/src/lab-03/__tests__/StaffQueue.test.tsx`).
+
+**Testable when F-07 is done:**
+- Staff Queue renders system tickets with working search, filters, and pagination.
+- Staff can filter by status, priority, and assignment (`unassigned`, `me`).
+- Component tests pass.
+
+---
+
+### F-08 · IT Staff Ticket Detail Management & Activity Feed UI
+**Prerequisites:** F-04, F-05, F-07  
+**Branch:** `feature/lab03-08-staff-ticket-detail-ui`  
+**Status:** 📅 Planned
+
+Build the IT Staff management controls and activity feed on ticket detail view.
+
+**Scope:**
+- Sidebar Management Controls:
+  - Claim button, Reassign dropdown, IT Priority selector, Status transition dropdown.
+- `Pending Verification` Resolution Controls:
+  - Staff "Confirm Resolution" (closes ticket) and "Revert to In Progress" (resets `isRequesterResolved = false`).
+- Tabbed Activity Feed:
+  - Public Comments feed + Confidential Internal Notes feed (yellow tinted container).
+- Component Tests (`client/src/lab-03/__tests__/StaffDetail.test.tsx`).
 
 **Testable when F-08 is done:**
-- Staff Queue renders system tickets with working search, filters, and pagination.
-- Staff can claim/reassign tickets, change priority, and transition status.
-- Requester resolution request shows confirmation modal, transitions status to `Pending Verification`, and greys out button.
-- Staff can revert `Pending Verification` back to `In Progress`.
+- Staff can claim/reassign tickets, change priority, and transition status on detail view.
+- Staff can revert `Pending Verification` back to `In Progress` or confirm resolution to Close.
 - Public comments and internal notes feeds post and display cleanly.
 - Component tests pass.
 
 ---
 
-### F-09 · Minimalist Administrator User Management UI
-**Prerequisites:** F-06, F-07  
-**Branch:** `feature/lab03-09-admin-user-management-ui`
+### F-09 · Administrator User Management Backend & UI
+**Prerequisites:** F-02, F-05  
+**Branch:** `feature/lab03-09-admin-users`  
+**Status:** 📅 Planned
 
-Build the Administrator User Management screen and modals.
+Build Administrator user management backend endpoints, administration screen, and modals.
 
 **Scope:**
+- Backend API Endpoints (`/api/users`): Restricted to `ADMINISTRATOR` role (`403` for others).
+  - `GET /api/users`: Search (name/email), role filter.
+  - `POST /api/users`: Create user account (duplicate email `409` check).
+  - `PATCH /api/users/:id`: Edit user details, role, `isActive` status (Admin self-deactivation and last-admin guards `400`).
+  - `POST /api/users/:id/reset-password`: Reset initial password, setting `mustChangePassword = true`.
 - User Management Screen (`/admin/users`):
   - Search bar (name/email) and Role filter dropdown.
   - User table: Name, Email, Role badge, Status pill (`Active`/`Inactive`), Password Change Required badge, Actions.
 - Modals & Drawers:
-  - Create User Modal (Name, Email, Role single-select, Initial Password).
-  - Edit User Modal (Name, Email, Role, Active checkbox).
-  - Set Initial Password Modal (User email read-only, New Initial Password input).
-- Feedback & Safety: Error banners for duplicate email, self-deactivation warning banner.
-- Component Tests (`client/src/lab-03/__tests__/UserManagement.test.tsx`).
+  - Create User Modal, Edit User Modal, Reset Initial Password Modal.
+  - Safety error feedback banners.
+- Integration & Component Tests (`server/tests/lab-03/users-admin.api.test.ts`, `UserManagement.test.tsx`).
 
 **Testable when F-09 is done:**
-- Admin can view, search, and filter user list.
-- Creating a user, editing an account, and resetting passwords update UI dynamically.
-- Safety error feedback displays when self-deactivation is attempted.
-- Component tests pass.
+- Admin can view, search, filter, create, edit users, and reset initial passwords.
+- Non-Admin accessing `/api/users` receives `403 Forbidden`.
+- Duplicate email returns `409 Conflict`, self-deactivation returns `400 Bad Request`.
+- Component and API tests pass.
 
 ---
 
-### F-10 · E2E Testing, Visual Audits & Definition of Done Verification
+### F-10 · Playwright E2E Testing, Visual Audits & Definition of Done Verification
 **Prerequisites:** F-07, F-08, F-09  
-**Branch:** `feature/lab03-10-e2e-and-dod`
+**Branch:** `feature/lab03-10-e2e-and-docs`  
+**Status:** 📅 Planned
 
 Implement Playwright end-to-end test suites, perform responsive design audits, capture required submission evidence, and verify Product Definition of Done.
 
@@ -292,7 +305,7 @@ Implement Playwright end-to-end test suites, perform responsive design audits, c
   - `staff-ticket-flow.spec.ts`: Staff login, queue search/filter, claiming ticket, setting priority, posting internal note, requester resolution request, staff revert, staff resolution.
   - `user-administration.spec.ts`: Admin login, user creation, editing account, initial password reset, safety guard verification.
 - Visual Audit & Screenshots:
-  - Save desktop (1440px), tablet (768px), and mobile (375px) screenshots to `artifacts/lab-03/screenshots/`.
+  - Save desktop (1440px), tablet (768px), and mobile (375px) screenshots.
 - Reviewer & AI Documentation:
   - Finalize `docs/lab-03/reviewer.md` with PR links and partner review approvals.
   - Finalize `docs/lab-03/ai-use.md` with prompts and reflection.
