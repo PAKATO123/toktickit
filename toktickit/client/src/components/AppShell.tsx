@@ -61,7 +61,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       <header className="tt-header">
         <div className="tt-header-inner">
-          <Link to="/" className="tt-brand" aria-label="TokTickIT Home">
+          <Link
+            to={user.role === "REQUESTER" ? "/tickets" : "/staff/queue"}
+            className="tt-brand"
+            aria-label="TokTickIT Home"
+          >
             <span role="img" aria-label="ticket icon">🎫</span> TokTickIT
           </Link>
 
