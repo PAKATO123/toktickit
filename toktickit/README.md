@@ -1,18 +1,29 @@
-# TokTickIT — Internal IT Ticketing System (Lab 03 Implementation)
+# TokTickIT — Internal IT Ticketing System
 
-TokTickIT is an internal IT support ticketing application built with **React** (TypeScript, Vite, Vanilla CSS), **Express** (Node.js REST API), **Prisma ORM**, and **PostgreSQL**.
+TokTickIT is an enterprise internal IT support ticketing application built with **React** (TypeScript, Vite, Vanilla CSS), **Express** (Node.js REST API), **Prisma ORM**, and **PostgreSQL**.
 
 ---
 
-## Key Features (Lab 03)
+## Key Features & Capabilities
 
 - **Authentication & Security**: Email/password authentication, non-dismissible mandatory first-login password change with real-time complexity validation, and session-based auth.
 - **Role-Based Access Control (RBAC)**: Enforced authorization across 3 roles: `REQUESTER`, `IT_STAFF`, and `ADMINISTRATOR`.
-- **IT Staff Queue & Ticket Management**: Real-time searching, status/priority filtering, pagination, one-click ticket claiming, ownership reassignment, and IT Priority customization.
-- **Activity & Communication Feed**: Public Comments feed (visible to requesters and staff) and Confidential Internal Notes feed (strictly restricted to IT Staff and Admins).
-- **Requester Resolution Indication**: Allows ticket owners to request resolution, updating ticket status to `Pending Verification` with IT Staff confirmation/revert actions.
-- **Administrator User Management**: Minimalist admin user panel (`/admin/users`) with search, role filtering, user creation, account editing, password reset, self-deactivation prevention, and last-admin safety rules.
-- **Zen Green Design System**: Mobile-first responsive UI built with custom CSS variables (`--color-primary-green: #005A36`).
+- **Operational Role Dashboards**:
+  - **Requester Dashboard** (`/requester/dashboard`): Metrics for open tickets, input requests, recently updated tickets, and quick action shortcuts.
+  - **IT Staff Dashboard** (`/staff/dashboard`): Real-time counts for unassigned tickets, owned tickets, urgent/high priority, pending follow-ups, status distribution, and activity feeds.
+  - **Administrator Dashboard** (`/admin/dashboard`): Integrates staff operational metrics with complete user account stats.
+- **IT Staff Queue & Filter Controls** (`/staff/queue`):
+  - 2-row responsive filter bar (Search, Status, IT Priority, Assignment on row 1; Category, Related System, Follow-up Required, Clear All Filters on row 2).
+  - Green ticket links, hover highlighting, muted table headers, single `Last Updated` date column, and simplified `Yes`/`No` follow-up values.
+- **Actions Taken Management**:
+  - Audit log for logging work done, results, and follow-ups.
+  - 3-state follow-up tracking: `Follow-Up Required` (yellow `#FEFCBF`), `Followed up` (green `#E6FFFA`), and `No Follow-Up Needed` (gray).
+  - One-click "Mark done" action transition and custom sorting option (*"Put 'Follow-Up Required' first"*).
+- **Activity Feed & Resolution Workflow**:
+  - Public Comments feed and Confidential Internal Notes feed.
+  - Requester resolution indication (`Pending Verification` / `Waiting` compact badges).
+- **Administrator User Management** (`/admin/users`): Account management, role assignment, status toggling, and safety rules.
+- **Zen Green Design System**: Mobile-first responsive UI built with custom CSS variables (`--color-primary-green: #006B3C`).
 
 ---
 
@@ -55,7 +66,7 @@ cp .env.example .env
 Ensure `DATABASE_URL` in `.env` points to your active PostgreSQL instance.
 
 ### 3. Database Migration & Seeding
-Push the Prisma schema to PostgreSQL and seed initial reference data (Users, Categories, Related Systems, and Sample Tickets):
+Push the Prisma schema to PostgreSQL and seed initial reference data (Users, Categories, Related Systems, Sample Tickets, Actions Taken):
 ```bash
 cd server
 npx prisma db push
@@ -86,26 +97,21 @@ npm run dev
 
 The application features 100% passing test coverage across Unit, API/Integration, UI Component, and End-to-End (E2E) levels:
 
-- **Server Unit & Authorization API Tests (54 tests across 7 suites):**
+- **Server API Tests:**
   ```bash
   cd server
-  npx vitest run tests/lab-03
+  npx vitest run tests/lab-04
   ```
 
-- **Client React Component Tests (22 tests across 5 suites):**
+- **Client React Component Tests:**
   ```bash
   cd client
-  npx vitest run tests/lab-03
+  npx vitest run tests/lab-04
   ```
 
-- **Playwright End-to-End (E2E) Tests (10 tests across 3 suites):**
-  *Make sure both client (`http://localhost:5173`) and server (`http://localhost:3000`) are running.*
+- **Playwright End-to-End (E2E) Tests:**
   ```bash
-  # Run Lab 03 E2E tests headlessly
-  npx playwright test e2e/lab-03
-
-  # Run all E2E tests with UI dashboard
-  npm run test:e2e:ui
+  npx playwright test e2e/lab-04
   ```
 
 ---

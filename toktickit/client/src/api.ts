@@ -195,6 +195,8 @@ export interface StaffQueueTicketItem {
   itPriority: string | null;
   isRequesterResolved: boolean;
   createdAt: string;
+  updatedAt?: string;
+  hasFollowUpRequired?: boolean;
   category: { id: number; name: string };
   relatedSystem: { id: number; name: string };
   requester: { id: number; name: string; email: string };
@@ -211,6 +213,7 @@ export interface StaffQueueParams {
   status?: string;
   itPriority?: string;
   assignment?: string;
+  followUp?: string;
   categoryId?: string | number;
   relatedSystemId?: string | number;
   sortBy?: string;
@@ -237,6 +240,7 @@ export async function getStaffQueue(params: StaffQueueParams = {}): Promise<Staf
   if (params.status) query.append("status", params.status);
   if (params.itPriority) query.append("itPriority", params.itPriority);
   if (params.assignment) query.append("assignment", params.assignment);
+  if (params.followUp) query.append("followUp", params.followUp);
   if (params.categoryId) query.append("categoryId", String(params.categoryId));
   if (params.relatedSystemId) query.append("relatedSystemId", String(params.relatedSystemId));
   if (params.sortBy) query.append("sortBy", params.sortBy);
@@ -499,15 +503,32 @@ export interface UserAdminListItem {
   updatedAt?: string;
 }
 
+export interface UsersListResponse {
+  data: UserAdminListItem[];
+  pagination?: {
+    total: number;
+    totalItems: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  };
+}
+
 export async function getUsersList(params?: {
   search?: string;
   role?: string;
   isActive?: boolean;
-}): Promise<UserAdminListItem[]> {
+  page?: number;
+  pageSize?: number;
+}): Promise<UsersListResponse> {
   const query = new URLSearchParams();
   if (params?.search) query.append("search", params.search);
   if (params?.role) query.append("role", params.role);
   if (params?.isActive !== undefined) query.append("isActive", String(params.isActive));
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.pageSize) query.append("pageSize", String(params.pageSize));
 
   const url = `${API_BASE_URL}/api/users${query.toString() ? `?${query.toString()}` : ""}`;
   const res = await fetch(url, { credentials: "include" });
@@ -518,7 +539,10 @@ export async function getUsersList(params?: {
     error.code = json.error?.code;
     throw error;
   }
-  return json.data || [];
+  return {
+    data: json.data || [],
+    pagination: json.pagination || json.meta,
+  };
 }
 
 export async function createUserAccount(data: {
@@ -668,6 +692,73 @@ export async function updateActionTaken(
     throw error;
   }
   return json.actionTaken;
+}
+
+export interface RequesterDashboardData {
+  metrics: {
+    totalOpen: number;
+    waitingForRequester: number;
+  };
+  recentlyUpdated: TicketDetailData[];
+  recentlyResolved: TicketDetailData[];
+}
+
+export interface StaffDashboardData {
+  metrics: {
+    unassignedCount: number;
+    myOwnedCount: number;
+    urgentHighCount: number;
+    followUpCount: number;
+  };
+  statusDistribution: Record<string, number>;
+  recentActivity: TicketDetailData[];
+}
+
+export interface AdminDashboardData extends StaffDashboardData {
+  userStats: {
+    totalUsers: number;
+    requesterCount: number;
+    staffCount: number;
+    adminCount: number;
+    inactiveCount: number;
+  };
+}
+
+export async function getRequesterDashboard(requesterId?: number): Promise<RequesterDashboardData> {
+  const query = requesterId ? `?requesterId=${requesterId}` : "";
+  const res = await fetch(`${API_BASE_URL}/api/dashboard/requester${query}`, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to fetch Requester Dashboard data.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function getStaffDashboard(): Promise<StaffDashboardData> {
+  const res = await fetch(`${API_BASE_URL}/api/dashboard/staff`, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to fetch Staff Dashboard data.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
+}
+
+export async function getAdminDashboard(): Promise<AdminDashboardData> {
+  const res = await fetch(`${API_BASE_URL}/api/dashboard/admin`, { credentials: "include" });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to fetch Admin Dashboard data.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.data;
 }
 
 

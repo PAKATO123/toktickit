@@ -336,11 +336,11 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
     // 3. Parse & Validate Sorting
     const sortByRaw = req.query.sortBy;
     const sortBy = sortByRaw ? String(sortByRaw).toLowerCase() : "priority";
-    if (!["priority", "status"].includes(sortBy)) {
+    if (!["priority", "status", "date", "createdat", "updatedat"].includes(sortBy)) {
       return res.status(400).json({
         error: {
           code: "INVALID_QUERY",
-          message: "sortBy must be either 'priority' or 'status'.",
+          message: "sortBy must be 'priority', 'status', or 'date'.",
         },
       });
     }
@@ -403,7 +403,16 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
     }
 
     if (statusFilter) {
-      whereClause.currentStatus = { equals: statusFilter, mode: "insensitive" };
+      const sLower = statusFilter.toLowerCase();
+      if (sLower === "open" || sLower === "all_open") {
+        whereClause.currentStatus = { notIn: ["Closed", "Cancelled"] };
+      } else if (sLower === "waiting_for_requester" || sLower === "waiting for requester") {
+        whereClause.currentStatus = { equals: "Waiting for Requester", mode: "insensitive" };
+      } else if (sLower === "resolved") {
+        whereClause.currentStatus = { equals: "Resolved", mode: "insensitive" };
+      } else {
+        whereClause.currentStatus = { equals: statusFilter, mode: "insensitive" };
+      }
     }
 
     if (priorityFilter) {
@@ -487,7 +496,13 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
       let comp2 = 0;
       let comp3 = 0;
 
-      if (sortBy === "priority") {
+      if (["date", "createdat", "updatedat"].includes(sortBy)) {
+        const timeA = new Date(a.updatedAt || a.createdAt).getTime();
+        const timeB = new Date(b.updatedAt || b.createdAt).getTime();
+        comp1 = isAsc ? timeA - timeB : timeB - timeA;
+        comp2 = comparePriority(a.requestedPriority, b.requestedPriority, isAsc);
+        comp3 = compareTicketNumber(a.ticketNumber, b.ticketNumber, isAsc);
+      } else if (sortBy === "priority") {
         comp1 = comparePriority(a.requestedPriority, b.requestedPriority, isAsc);
         comp2 = compareStatus(a.currentStatus, b.currentStatus, isAsc);
         comp3 = compareTicketNumber(a.ticketNumber, b.ticketNumber, isAsc);
@@ -518,6 +533,7 @@ app.get("/api/tickets", requireAuth, async (req: Request, res: Response) => {
       requestedPriority: t.requestedPriority,
       currentStatus: t.currentStatus,
       createdAt: t.createdAt,
+      updatedAt: t.updatedAt,
     }));
 
     return res.status(200).json({
@@ -575,6 +591,7 @@ app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINI
     const statusFilter = req.query.status ? String(req.query.status).trim() : undefined;
     const itPriorityFilter = req.query.itPriority ? String(req.query.itPriority).trim() : undefined;
     const assignmentFilter = req.query.assignment ? String(req.query.assignment).trim().toLowerCase() : undefined;
+    const followUpFilter = req.query.followUp ? String(req.query.followUp).trim().toLowerCase() : undefined;
 
     const assignedToIdRaw = req.query.assignedToId;
     let assignedToIdFilter: number | null | undefined = undefined;
@@ -615,11 +632,25 @@ app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINI
     }
 
     if (statusFilter) {
-      whereClause.currentStatus = { equals: statusFilter, mode: "insensitive" };
+      const sLower = statusFilter.toLowerCase();
+      if (sLower === "waiting_for_requester" || sLower === "waiting for requester") {
+        whereClause.currentStatus = { equals: "Waiting for Requester", mode: "insensitive" };
+      } else if (sLower === "in_progress" || sLower === "in progress") {
+        whereClause.currentStatus = { equals: "In Progress", mode: "insensitive" };
+      } else if (sLower === "pending_verification" || sLower === "pending verification") {
+        whereClause.currentStatus = { equals: "Pending Verification", mode: "insensitive" };
+      } else if (sLower === "open") {
+        whereClause.currentStatus = { notIn: ["Closed", "Cancelled"] };
+      } else {
+        whereClause.currentStatus = { equals: statusFilter, mode: "insensitive" };
+      }
     }
 
     if (itPriorityFilter) {
-      if (["NONE", "UNASSIGNED", "NULL"].includes(itPriorityFilter.toUpperCase())) {
+      const pLower = itPriorityFilter.toLowerCase();
+      if (pLower === "high_urgent" || pLower === "high,urgent" || pLower === "urgent_high") {
+        whereClause.itPriority = { in: ["High", "Urgent"] };
+      } else if (["none", "unassigned", "null"].includes(pLower)) {
         whereClause.itPriority = null;
       } else {
         whereClause.itPriority = { equals: itPriorityFilter, mode: "insensitive" };
@@ -644,6 +675,12 @@ app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINI
       whereClause.relatedSystemId = relatedSystemIdFilter;
     }
 
+    if (followUpFilter === "required" || followUpFilter === "true") {
+      whereClause.actionsTaken = { some: { followUpRequired: true } };
+    } else if (followUpFilter === "none" || followUpFilter === "false") {
+      whereClause.actionsTaken = { none: { followUpRequired: true } };
+    }
+
     const rawTickets = await prisma.ticket.findMany({
       where: whereClause,
       include: {
@@ -651,6 +688,7 @@ app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINI
         relatedSystem: { select: { id: true, name: true } },
         requester: { select: { id: true, name: true, email: true } },
         assignedTo: { select: { id: true, name: true, email: true, role: true } },
+        actionsTaken: { select: { id: true, followUpRequired: true } },
         _count: {
           select: {
             attachments: { where: { isDeleted: false } },
@@ -700,12 +738,19 @@ app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINI
       return isAscending ? diff : -diff;
     };
 
+    const compareUpdatedAt = (uA: Date, uB: Date, isAscending: boolean): number => {
+      const diff = new Date(uA).getTime() - new Date(uB).getTime();
+      return isAscending ? diff : -diff;
+    };
+
     rawTickets.sort((a, b) => {
       let comp = 0;
       if (sortBy === "itPriority") {
         comp = compareItPriority(a.itPriority, b.itPriority, isAsc);
       } else if (sortBy === "currentStatus" || sortBy === "status") {
         comp = compareStatus(a.currentStatus, b.currentStatus, isAsc);
+      } else if (sortBy === "updatedAt") {
+        comp = compareUpdatedAt(a.updatedAt, b.updatedAt, isAsc);
       } else {
         comp = compareCreatedAt(a.createdAt, b.createdAt, isAsc);
       }
@@ -717,7 +762,10 @@ app.get("/api/tickets/staff-queue", requireAuth, requireRole("IT_STAFF", "ADMINI
     const total = rawTickets.length;
     const totalPages = total === 0 ? 1 : Math.ceil(total / pageSize);
     const startIndex = (page - 1) * pageSize;
-    const paginated = rawTickets.slice(startIndex, startIndex + pageSize);
+    const paginated = rawTickets.slice(startIndex, startIndex + pageSize).map((t) => ({
+      ...t,
+      hasFollowUpRequired: t.actionsTaken?.some((a) => a.followUpRequired) ?? false,
+    }));
 
     const meta = {
       total,
@@ -1821,6 +1869,278 @@ app.post("/api/tickets/:id/notes", requireAuth, requireRole("IT_STAFF", "ADMINIS
 });
 
 // ---------------------------------------------------------------------------
+// Dashboard Operations APIs — GET /api/dashboard/requester, /staff, /admin
+// ---------------------------------------------------------------------------
+app.get("/api/dashboard/requester", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+    let targetRequesterId = sessionUser.id;
+
+    if (req.query.requesterId && (sessionUser.role === "IT_STAFF" || sessionUser.role === "ADMINISTRATOR")) {
+      const parsedReqId = parseInt(String(req.query.requesterId), 10);
+      if (!isNaN(parsedReqId) && parsedReqId > 0) {
+        targetRequesterId = parsedReqId;
+      }
+    }
+
+    const totalOpen = await prisma.ticket.count({
+      where: {
+        requesterId: targetRequesterId,
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+      },
+    });
+
+    const waitingForRequester = await prisma.ticket.count({
+      where: {
+        requesterId: targetRequesterId,
+        currentStatus: "Waiting for Requester",
+      },
+    });
+
+    const recentlyUpdated = await prisma.ticket.findMany({
+      where: { requesterId: targetRequesterId },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      include: {
+        category: { select: { name: true } },
+        relatedSystem: { select: { name: true } },
+        assignedTo: { select: { id: true, name: true } },
+      },
+    });
+
+    const recentlyResolved = await prisma.ticket.findMany({
+      where: {
+        requesterId: targetRequesterId,
+        currentStatus: "Resolved",
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      include: {
+        category: { select: { name: true } },
+        relatedSystem: { select: { name: true } },
+        assignedTo: { select: { id: true, name: true } },
+      },
+    });
+
+    return res.status(200).json({
+      data: {
+        metrics: {
+          totalOpen,
+          waitingForRequester,
+        },
+        recentlyUpdated,
+        recentlyResolved,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating Requester Dashboard metrics:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to load Requester Dashboard data." },
+    });
+  }
+});
+
+app.get("/api/dashboard/staff", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+
+    const unassignedCount = await prisma.ticket.count({
+      where: {
+        assignedToId: null,
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+      },
+    });
+
+    const myOwnedCount = await prisma.ticket.count({
+      where: {
+        assignedToId: sessionUser.id,
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+      },
+    });
+
+    const urgentHighCount = await prisma.ticket.count({
+      where: {
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+        OR: [
+          { itPriority: { in: ["Urgent", "High"] } },
+          {
+            itPriority: null,
+            requestedPriority: { in: ["URGENT", "HIGH"] },
+          },
+        ],
+      },
+    });
+
+    const followUpCount = await prisma.ticket.count({
+      where: {
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+        actionsTaken: {
+          some: {
+            followUpRequired: true,
+          },
+        },
+      },
+    });
+
+    const statusCountsRaw = await prisma.ticket.groupBy({
+      by: ["currentStatus"],
+      _count: { currentStatus: true },
+    });
+
+    const statusDistribution: Record<string, number> = {
+      New: 0,
+      Open: 0,
+      "In Progress": 0,
+      "Waiting for Requester": 0,
+      Resolved: 0,
+      Closed: 0,
+      Reopened: 0,
+      Cancelled: 0,
+    };
+
+    statusCountsRaw.forEach((sc) => {
+      statusDistribution[sc.currentStatus] = sc._count.currentStatus;
+    });
+
+    const recentActivity = await prisma.ticket.findMany({
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      include: {
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true } },
+        category: { select: { name: true } },
+      },
+    });
+
+    return res.status(200).json({
+      data: {
+        metrics: {
+          unassignedCount,
+          myOwnedCount,
+          urgentHighCount,
+          followUpCount,
+        },
+        statusDistribution,
+        recentActivity,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating IT Staff Dashboard metrics:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to load IT Staff Dashboard data." },
+    });
+  }
+});
+
+app.get("/api/dashboard/admin", requireAuth, requireRole("ADMINISTRATOR"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const sessionUser = req.session.user!;
+
+    const unassignedCount = await prisma.ticket.count({
+      where: {
+        assignedToId: null,
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+      },
+    });
+
+    const myOwnedCount = await prisma.ticket.count({
+      where: {
+        assignedToId: sessionUser.id,
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+      },
+    });
+
+    const urgentHighCount = await prisma.ticket.count({
+      where: {
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+        OR: [
+          { itPriority: { in: ["Urgent", "High"] } },
+          {
+            itPriority: null,
+            requestedPriority: { in: ["URGENT", "HIGH"] },
+          },
+        ],
+      },
+    });
+
+    const followUpCount = await prisma.ticket.count({
+      where: {
+        currentStatus: { notIn: ["Closed", "Cancelled"] },
+        actionsTaken: {
+          some: {
+            followUpRequired: true,
+          },
+        },
+      },
+    });
+
+    const statusCountsRaw = await prisma.ticket.groupBy({
+      by: ["currentStatus"],
+      _count: { currentStatus: true },
+    });
+
+    const statusDistribution: Record<string, number> = {
+      New: 0,
+      Open: 0,
+      "In Progress": 0,
+      "Waiting for Requester": 0,
+      Resolved: 0,
+      Closed: 0,
+      Reopened: 0,
+      Cancelled: 0,
+    };
+
+    statusCountsRaw.forEach((sc) => {
+      statusDistribution[sc.currentStatus] = sc._count.currentStatus;
+    });
+
+    const recentActivity = await prisma.ticket.findMany({
+      orderBy: { updatedAt: "desc" },
+      take: 5,
+      include: {
+        requester: { select: { id: true, name: true, email: true } },
+        assignedTo: { select: { id: true, name: true } },
+        category: { select: { name: true } },
+      },
+    });
+
+    const totalUsers = await prisma.user.count();
+    const requesterCount = await prisma.user.count({ where: { role: "REQUESTER", isActive: true } });
+    const staffCount = await prisma.user.count({ where: { role: "IT_STAFF", isActive: true } });
+    const adminCount = await prisma.user.count({ where: { role: "ADMINISTRATOR", isActive: true } });
+    const inactiveCount = await prisma.user.count({ where: { isActive: false } });
+
+    return res.status(200).json({
+      data: {
+        metrics: {
+          unassignedCount,
+          myOwnedCount,
+          urgentHighCount,
+          followUpCount,
+        },
+        userStats: {
+          totalUsers,
+          requesterCount,
+          staffCount,
+          adminCount,
+          inactiveCount,
+        },
+        statusDistribution,
+        recentActivity,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating Admin Dashboard data:", error);
+    return res.status(500).json({
+      error: { code: "INTERNAL_ERROR", message: "Unable to load Admin Dashboard data." },
+    });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // User Management & Staff Selection API — GET /api/users
 // ---------------------------------------------------------------------------
 app.get("/api/users", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), async (req: Request, res: Response) => {
@@ -1829,6 +2149,9 @@ app.get("/api/users", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), asy
     const roleFilter = req.query.role ? String(req.query.role).trim().toUpperCase() : undefined;
     const isActiveQuery = req.query.isActive;
     const search = req.query.search ? String(req.query.search).trim() : undefined;
+
+    const page = req.query.page !== undefined ? Math.max(1, parseInt(String(req.query.page), 10) || 1) : undefined;
+    const pageSize = req.query.pageSize !== undefined ? Math.max(1, parseInt(String(req.query.pageSize), 10) || 10) : undefined;
 
     const whereClause: any = {};
     if (roleFilter && ["REQUESTER", "IT_STAFF", "ADMINISTRATOR"].includes(roleFilter)) {
@@ -1844,7 +2167,9 @@ app.get("/api/users", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), asy
       ];
     }
 
-    const users = await prisma.user.findMany({
+    const totalUsers = await prisma.user.count({ where: whereClause });
+
+    const findOptions: any = {
       where: whereClause,
       select: {
         id: true,
@@ -1856,9 +2181,30 @@ app.get("/api/users", requireAuth, requireRole("IT_STAFF", "ADMINISTRATOR"), asy
         createdAt: true,
       },
       orderBy: [{ role: "asc" }, { name: "asc" }],
-    });
+    };
 
-    return res.status(200).json({ data: users });
+    if (page !== undefined && pageSize !== undefined) {
+      findOptions.skip = (page - 1) * pageSize;
+      findOptions.take = pageSize;
+    }
+
+    const users = await prisma.user.findMany(findOptions);
+
+    const effPageSize = pageSize || totalUsers || 1;
+    const totalPages = Math.ceil(totalUsers / effPageSize) || 1;
+    const effPage = page || 1;
+
+    const pagination = {
+      total: totalUsers,
+      totalItems: totalUsers,
+      page: effPage,
+      pageSize: effPageSize,
+      totalPages,
+      hasPreviousPage: effPage > 1,
+      hasNextPage: effPage < totalPages,
+    };
+
+    return res.status(200).json({ data: users, meta: pagination, pagination });
   } catch (error) {
     console.error("Error loading users list:", error);
     return res.status(500).json({
@@ -2214,7 +2560,7 @@ app.post(
           description: String(description).trim(),
           result: String(result).trim(),
           followUpRequired: isFollowUpReq,
-          followUpNote: isFollowUpReq ? followNoteStr : null,
+          followUpNote: followNoteStr.length > 0 ? followNoteStr : null,
           attachmentNotes: attachmentNotes ? String(attachmentNotes).trim() : null,
         },
         include: {
@@ -2301,7 +2647,7 @@ app.put(
           description: description !== undefined ? String(description).trim() : existingAction.description,
           result: result !== undefined ? String(result).trim() : existingAction.result,
           followUpRequired: isFollowUpReq,
-          followUpNote: isFollowUpReq ? followNoteStr : null,
+          followUpNote: followNoteStr.length > 0 ? followNoteStr : (existingAction.followUpNote || null),
           attachmentNotes: attachmentNotes !== undefined ? (attachmentNotes ? String(attachmentNotes).trim() : null) : existingAction.attachmentNotes,
         },
         include: {

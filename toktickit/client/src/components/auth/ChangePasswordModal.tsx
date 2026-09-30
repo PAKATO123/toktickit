@@ -34,13 +34,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onSucc
     try {
       await changePassword({ currentPassword, newPassword });
       if (onSuccess) onSuccess();
-      if (window.location.pathname === "/") {
-        if (user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR") {
-          navigate("/staff/queue");
-        } else {
-          navigate("/tickets");
-        }
-      }
+      window.location.reload();
     } catch (err: any) {
       setError(err.message || "Current password is incorrect or new password does not meet requirements.");
     } finally {

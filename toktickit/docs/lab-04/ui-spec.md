@@ -25,8 +25,9 @@ Lab 4 maintains strict design continuity with the **Zen Green** theme establishe
   - `Follow-Up Needed`: Indigo Accent (`bg-indigo-50 text-indigo-800 border-indigo-200`)
   - `Resolved / Closed`: Teal Accent (`bg-teal-50 text-teal-800 border-teal-200`)
 - **Action Taken Badges**:
-  - `Follow-Up Required`: Amber pill badge (`bg-amber-100 text-amber-800 font-semibold`)
-  - `No Follow-Up`: Slate pill badge (`bg-slate-100 text-slate-600`)
+  - `Follow-Up Required`: Yellow pill badge (`backgroundColor: #FEFCBF`, `border: 1px solid #D69E2E`, `color: #744210`, `fontWeight: 600`)
+  - `Followed up`: Green pill badge (`backgroundColor: #E6FFFA`, `border: 1px solid #319795`, `color: #234E52`, `fontWeight: 600`)
+  - `No Follow-Up Needed`: Gray pill badge (`backgroundColor: #EDF2F7`, `border: 1px solid #CBD5E0`, `color: #4A5568`)
 
 ---
 

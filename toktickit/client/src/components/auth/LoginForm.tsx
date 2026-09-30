@@ -33,13 +33,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       } else {
         try {
           const me = await getMeApi();
-          if (me.user?.role === "IT_STAFF" || me.user?.role === "ADMINISTRATOR") {
-            navigate("/staff/queue", { replace: true });
+          if (me.user?.role === "ADMINISTRATOR") {
+            navigate("/admin/dashboard", { replace: true });
+          } else if (me.user?.role === "IT_STAFF") {
+            navigate("/staff/dashboard", { replace: true });
           } else {
-            navigate("/tickets", { replace: true });
+            navigate("/requester/dashboard", { replace: true });
           }
         } catch {
-          navigate("/tickets", { replace: true });
+          navigate("/requester/dashboard", { replace: true });
         }
       }
     } catch (err: any) {

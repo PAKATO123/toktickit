@@ -5,16 +5,21 @@ interface ActionsTakenSectionProps {
   ticketId: number;
   currentUserRole: string;
   ticketStatus: string;
+  onActionsChange?: (actions: ActionTaken[]) => void;
 }
 
 export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
   ticketId,
   currentUserRole,
   ticketStatus,
+  onActionsChange,
 }) => {
   const [actionsTaken, setActionsTaken] = useState<ActionTaken[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Follow-Up Sort Toggle (Default ON)
+  const [putFollowUpFirst, setPutFollowUpFirst] = useState<boolean>(true);
 
   // Collapsible & Pagination State
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
@@ -43,6 +48,9 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
       setError(null);
       const data = await getActionsTaken(ticketId);
       setActionsTaken(data);
+      if (onActionsChange) {
+        onActionsChange(data);
+      }
     } catch (err: any) {
       console.error("Error loading actions taken:", err);
       setError(err.message || "Failed to load Actions Taken.");
@@ -55,8 +63,51 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
     fetchActions();
   }, [ticketId]);
 
-  const totalPages = Math.ceil(actionsTaken.length / PAGE_SIZE) || 1;
-  const paginatedActions = actionsTaken.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const [actionToMarkDone, setActionToMarkDone] = useState<ActionTaken | null>(null);
+
+  const handleOpenMarkDoneModal = (action: ActionTaken) => {
+    setActionToMarkDone(action);
+  };
+
+  const confirmMarkDone = async () => {
+    if (!actionToMarkDone) return;
+    const action = actionToMarkDone;
+    setActionToMarkDone(null);
+
+    try {
+      await updateActionTaken(ticketId, action.id, {
+        actionDate: action.actionDate,
+        description: action.description,
+        result: action.result,
+        followUpRequired: false,
+        followUpNote: action.followUpNote?.trim() ? action.followUpNote : "Followed up",
+        attachmentNotes: action.attachmentNotes || undefined,
+      });
+      await fetchActions();
+    } catch (err: any) {
+      console.error("Error marking follow-up as done:", err);
+      setError(err.message || "Failed to mark follow-up as done.");
+    }
+  };
+
+  const sortedActions = [...actionsTaken].sort((a, b) => {
+    if (putFollowUpFirst) {
+      if (a.followUpRequired && !b.followUpRequired) return -1;
+      if (!a.followUpRequired && b.followUpRequired) return 1;
+
+      if (a.followUpRequired && b.followUpRequired) {
+        return new Date(a.actionDate).getTime() - new Date(b.actionDate).getTime();
+      }
+
+      if (!a.followUpRequired && !b.followUpRequired) {
+        return new Date(b.actionDate).getTime() - new Date(a.actionDate).getTime();
+      }
+    }
+    return new Date(b.actionDate).getTime() - new Date(a.actionDate).getTime();
+  });
+
+  const totalPages = Math.ceil(sortedActions.length / PAGE_SIZE) || 1;
+  const paginatedActions = sortedActions.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const formatLocalDatetime = (d: Date | string = new Date()) => {
     const dateObj = typeof d === "string" ? new Date(d) : d;
@@ -121,7 +172,7 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
         description: description.trim(),
         result: result.trim(),
         followUpRequired,
-        followUpNote: followUpRequired ? followUpNote.trim() : "",
+        followUpNote: followUpRequired ? followUpNote.trim() : (followUpNote.trim() || undefined),
         attachmentNotes: attachmentNotes.trim() || undefined,
       };
 
@@ -171,6 +222,16 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
           <span style={{ fontSize: "13px", color: "var(--color-text-muted)", fontWeight: 500 }}>
             ({actionsTaken.length} {actionsTaken.length === 1 ? "Record" : "Records"})
           </span>
+
+          {/* Checkbox Toggle to put Follow-Up Required first */}
+          <label style={{ fontSize: "13px", color: "var(--color-text-main)", display: "flex", alignItems: "center", gap: "6px", cursor: "pointer", userSelect: "none" }}>
+            <input
+              type="checkbox"
+              checked={putFollowUpFirst}
+              onChange={(e) => setPutFollowUpFirst(e.target.checked)}
+            />
+            Put 'Follow-Up Required' first
+          </label>
         </div>
 
         {isStaffOrAdmin && !isCancelled && (
@@ -215,9 +276,9 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
                   key={action.id}
                   style={{
                     padding: "16px",
-                    border: "1px solid var(--color-border)",
+                    border: action.followUpRequired ? "1px solid #F6E05E" : "1px solid var(--color-border)",
                     borderRadius: "var(--radius-md)",
-                    backgroundColor: "var(--color-surface)",
+                    backgroundColor: action.followUpRequired ? "#FFFFF0" : "var(--color-surface)",
                     boxShadow: "var(--shadow-sm)",
                   }}
                 >
@@ -230,8 +291,12 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
                         👤 {action.performedBy?.name || `Staff #${action.performedById}`}
                       </span>
                       {action.followUpRequired ? (
-                        <span className="tt-badge tt-badge-high">
+                        <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>
                           Follow-Up Required
+                        </span>
+                      ) : action.followUpNote ? (
+                        <span className="tt-badge" style={{ backgroundColor: "#E6FFFA", color: "#234E52", border: "1px solid #319795", fontWeight: 600 }}>
+                          Followed up
                         </span>
                       ) : (
                         <span className="tt-badge tt-badge-low">
@@ -241,21 +306,40 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
                     </div>
 
                     {isStaffOrAdmin && !isCancelled && (
-                      <button
-                        type="button"
-                        onClick={() => handleOpenEditModal(action)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "var(--color-secondary-green)",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          textDecoration: "underline",
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        {action.followUpRequired && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenMarkDoneModal(action)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              color: "var(--color-secondary-green)",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              cursor: "pointer",
+                              textDecoration: "underline",
+                            }}
+                          >
+                            Mark done
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditModal(action)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "var(--color-secondary-green)",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -464,6 +548,80 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Mark Done Confirmation Modal Overlay */}
+      {actionToMarkDone && (
+        <div className="tt-modal-backdrop" data-testid="mark-done-confirmation-modal">
+          <div className="tt-modal" style={{ maxWidth: "440px", width: "90%" }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                borderBottom: "1px solid var(--color-border)",
+                paddingBottom: "12px",
+                marginBottom: "16px",
+              }}
+            >
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--color-text-main)" }}>
+                Confirm Follow-Up Completion
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActionToMarkDone(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "20px",
+                  cursor: "pointer",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <p style={{ fontSize: "14px", color: "var(--color-text-main)", margin: "0 0 16px 0", lineHeight: 1.5 }}>
+              Are you sure you want to mark this follow-up requirement as completed?
+            </p>
+
+            {actionToMarkDone.description && (
+              <div
+                style={{
+                  padding: "10px 12px",
+                  backgroundColor: "#FAFAFA",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "var(--radius-sm)",
+                  marginBottom: "20px",
+                  fontSize: "13px",
+                  color: "var(--color-text-muted)",
+                }}
+              >
+                <strong style={{ color: "var(--color-text-main)" }}>Action:</strong> {actionToMarkDone.description}
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <button
+                type="button"
+                className="tt-btn tt-btn-outline"
+                onClick={() => setActionToMarkDone(null)}
+                style={{ fontSize: "13px", height: "36px" }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="tt-btn tt-btn-primary"
+                onClick={confirmMarkDone}
+                style={{ fontSize: "13px", height: "36px" }}
+              >
+                Confirm Mark Done
+              </button>
+            </div>
           </div>
         </div>
       )}
