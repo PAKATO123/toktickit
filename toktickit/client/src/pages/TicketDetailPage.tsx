@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
 import { useAuth } from "../context/AuthContext";
+import { ActionsTakenSection } from "../components/ActionsTakenSection";
 import {
   getTicketDetail,
   addAttachmentToTicket,
@@ -57,8 +58,9 @@ export const TicketDetailPage: React.FC = () => {
   // Staff Management States (F-08)
   const [staffUsers, setStaffUsers] = useState<UserOption[]>([]);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [hasFollowUpRequired, setHasFollowUpRequired] = useState<boolean>(false);
 
-  // Activity Feed States (F-08)
+  // Activity Feed States (F-08 & Lab 4 Sprint)
   const [activeTab, setActiveTab] = useState<"comments" | "notes">("comments");
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [notes, setNotes] = useState<InternalNoteItem[]>([]);
@@ -66,6 +68,11 @@ export const TicketDetailPage: React.FC = () => {
   const [noteInput, setNoteInput] = useState<string>("");
   const [submittingComment, setSubmittingComment] = useState<boolean>(false);
   const [submittingNote, setSubmittingNote] = useState<boolean>(false);
+  const [feedCollapsed, setFeedCollapsed] = useState<boolean>(false);
+  const [commentsPage, setCommentsPage] = useState<number>(1);
+  const [notesPage, setNotesPage] = useState<number>(1);
+  const COMMENTS_PER_PAGE = 10;
+  const NOTES_PER_PAGE = 10;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -76,12 +83,18 @@ export const TicketDetailPage: React.FC = () => {
   const currentRequesterId = selectedRequester?.id || user?.id;
 
   // Track initial requester ID to detect requester switches (BR-07)
-  const initialRequesterIdRef = useRef<number | null>(currentRequesterId || null);
+  const initialRequesterIdRef = useRef<number | null>(null);
 
-  // BR-07: Redirect to /tickets if requester context changes while on detail page
+  useEffect(() => {
+    if (currentRequesterId && initialRequesterIdRef.current === null) {
+      initialRequesterIdRef.current = currentRequesterId;
+    }
+  }, [currentRequesterId]);
+
+  // BR-07: Redirect to /requester/tickets if requester context changes while on detail page
   useEffect(() => {
     if (!isStaff && selectedRequester && initialRequesterIdRef.current !== null && selectedRequester.id !== initialRequesterIdRef.current) {
-      navigate("/tickets");
+      navigate("/requester/tickets");
     }
   }, [selectedRequester, navigate, isStaff]);
 
@@ -215,6 +228,7 @@ export const TicketDetailPage: React.FC = () => {
       setCommentInput("");
       const updatedComments = await getPublicComments(ticket.id);
       setComments(updatedComments);
+      setCommentsPage(1);
       setToastMessage("Comment posted.");
     } catch (err: any) {
       console.error("Error posting comment:", err);
@@ -232,6 +246,7 @@ export const TicketDetailPage: React.FC = () => {
       setNoteInput("");
       const updatedNotes = await getInternalNotes(ticket.id);
       setNotes(updatedNotes);
+      setNotesPage(1);
       setToastMessage("Internal note added.");
     } catch (err: any) {
       console.error("Error posting note:", err);
@@ -342,8 +357,12 @@ export const TicketDetailPage: React.FC = () => {
   };
 
   const renderPriorityBadge = (priority: string | null, labelPrefix?: string) => {
-    if (!priority) {
-      return <span style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>Unassigned</span>;
+    if (!priority || priority.toLowerCase() === "unassigned") {
+      return (
+        <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0" }}>
+          {labelPrefix ? `${labelPrefix}: ` : ""}Unassigned
+        </span>
+      );
     }
     const up = priority.toUpperCase();
     let badgeClass = "tt-badge";
@@ -634,6 +653,11 @@ export const TicketDetailPage: React.FC = () => {
                 {renderStatusBadge(ticket.currentStatus, ticket.isRequesterResolved)}
                 {renderPriorityBadge(ticket.requestedPriority, "Req Priority")}
                 {ticket.itPriority && renderPriorityBadge(ticket.itPriority, "IT Priority")}
+                {hasFollowUpRequired && (
+                  <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>
+                    Follow-Up Required
+                  </span>
+                )}
                 {ticket.assignedTo && (
                   <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#2D3748", border: "1px solid #CBD5E0" }}>
                     👤 {ticket.assignedTo.name}
@@ -896,196 +920,325 @@ export const TicketDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tabbed Activity Feed & Ticket Communication (F-08) */}
+              {/* Actions Taken Section (Lab 4 Sprint) */}
+              <ActionsTakenSection
+                ticketId={ticket.id}
+                currentUserRole={user?.role || "REQUESTER"}
+                ticketStatus={ticket.currentStatus}
+                onActionsChange={(actions) => setHasFollowUpRequired(actions.some((a) => a.followUpRequired))}
+              />
+
+              {/* Activity Feed & Ticket Communication (F-08 & Lab 4 Sprint) */}
               <div className="tt-card">
-                <div style={{ display: "flex", gap: "12px", borderBottom: "2px solid var(--color-border)", paddingBottom: "12px", marginBottom: "20px" }}>
-                  <button
-                    type="button"
-                    data-testid="comments-tab"
-                    className={`tt-btn ${activeTab === "comments" ? "tt-btn-primary" : "tt-btn-outline"}`}
-                    onClick={() => setActiveTab("comments")}
-                    style={{ fontSize: "14px" }}
-                  >
-                    💬 Public Comments ({comments.length})
-                  </button>
-                  {isStaff && (
+                {/* Section Header matching Actions Taken design */}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: feedCollapsed ? 0 : "16px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <button
+                      type="button"
+                      onClick={() => setFeedCollapsed(!feedCollapsed)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "var(--color-text-muted)",
+                        padding: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      title={feedCollapsed ? "Expand Comments" : "Collapse Comments"}
+                    >
+                      <span>{feedCollapsed ? "▶" : "▼"}</span>
+                      <h3 style={{ margin: 0, fontSize: "16px", color: "var(--color-text-main)" }}>
+                        {isStaff && activeTab === "notes" ? "Confidential Internal Notes" : "Comments"}
+                      </h3>
+                    </button>
+
+                    {/* Plain Text Record Count (No Pill) matching Actions Taken */}
+                    <span style={{ fontSize: "13px", color: "var(--color-text-muted)", fontWeight: 500 }}>
+                      ({activeTab === "comments" ? comments.length : notes.length}{" "}
+                      {activeTab === "comments"
+                        ? comments.length === 1 ? "Comment" : "Comments"
+                        : notes.length === 1 ? "Note" : "Notes"})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Extra Control Strip for Staff/Admin to switch tabs — invisible to Requester */}
+                {isStaff && !feedCollapsed && (
+                  <div style={{ display: "flex", gap: "8px", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px", marginBottom: "16px" }}>
+                    <button
+                      type="button"
+                      data-testid="comments-tab"
+                      onClick={() => setActiveTab("comments")}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        borderBottom: activeTab === "comments" ? "2px solid var(--color-primary-green)" : "2px solid transparent",
+                        padding: "4px 8px",
+                        fontWeight: activeTab === "comments" ? 700 : 500,
+                        color: activeTab === "comments" ? "var(--color-primary-green)" : "var(--color-text-muted)",
+                        fontSize: "13px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      💬 Comments ({comments.length})
+                    </button>
+
                     <button
                       type="button"
                       data-testid="notes-tab"
-                      className={`tt-btn ${activeTab === "notes" ? "tt-btn-primary" : "tt-btn-outline"}`}
                       onClick={() => setActiveTab("notes")}
                       style={{
-                        fontSize: "14px",
-                        backgroundColor: activeTab === "notes" ? "#D69E2E" : undefined,
-                        borderColor: activeTab === "notes" ? "#D69E2E" : undefined,
-                        color: activeTab === "notes" ? "#FFFFFF" : undefined,
+                        background: "none",
+                        border: "none",
+                        borderBottom: activeTab === "notes" ? "2px solid #D69E2E" : "2px solid transparent",
+                        padding: "4px 8px",
+                        fontWeight: activeTab === "notes" ? 700 : 500,
+                        color: activeTab === "notes" ? "#744210" : "var(--color-text-muted)",
+                        fontSize: "13px",
+                        cursor: "pointer",
                       }}
                     >
                       🔒 Confidential Internal Notes ({notes.length})
                     </button>
-                  )}
-                </div>
-
-                {/* Public Comments Tab Panel */}
-                {activeTab === "comments" && (
-                  <div>
-                    <div data-testid="comments-feed" style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
-                      {!Array.isArray(comments) || comments.length === 0 ? (
-                        <p style={{ color: "var(--color-text-muted)", fontSize: "14px", fontStyle: "italic" }}>
-                          No public comments posted yet.
-                        </p>
-                      ) : (
-                        comments.map((comm) => (
-                          <div
-                            key={comm.id}
-                            style={{
-                              padding: "12px 16px",
-                              border: "1px solid var(--color-border)",
-                              borderRadius: "var(--radius-sm)",
-                              backgroundColor: "var(--color-surface)",
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                              <div style={{ display: "flex", alignItems: "center" }}>
-                                <span style={{ fontWeight: 600, fontSize: "14px" }}>
-                                  {comm.author?.name || "Unknown Author"}
-                                </span>
-                                {comm.author?.role === "IT_STAFF" && (
-                                  <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
-                                    IT Staff
-                                  </span>
-                                )}
-                                {comm.author?.role === "ADMINISTRATOR" && (
-                                  <span className="tt-badge" style={{ backgroundColor: "#FAF5FF", color: "#6B46C1", border: "1px solid #B794F4", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
-                                    Admin
-                                  </span>
-                                )}
-                                {comm.author?.role === "REQUESTER" && (
-                                  <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
-                                    Requester
-                                  </span>
-                                )}
-                              </div>
-                              <span style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>{formatDate(comm.createdAt)}</span>
-                            </div>
-                            <p style={{ margin: 0, fontSize: "14px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{comm.content}</p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-
-                    <div className="tt-form-group">
-                      <label className="tt-label" htmlFor="public-comment-input">
-                        Add a Public Comment
-                      </label>
-                      <textarea
-                        id="public-comment-input"
-                        data-testid="comment-input"
-                        className="tt-textarea"
-                        placeholder="Write a comment visible to ticket requester and IT staff..."
-                        value={commentInput}
-                        onChange={(e) => setCommentInput(e.target.value)}
-                        style={{ height: "90px" }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <button
-                        type="button"
-                        data-testid="post-comment-button"
-                        className="tt-btn tt-btn-primary"
-                        disabled={!commentInput.trim() || submittingComment}
-                        onClick={handlePostComment}
-                      >
-                        {submittingComment ? "Posting..." : "Post Comment"}
-                      </button>
-                    </div>
                   </div>
                 )}
 
-                {/* Confidential Internal Notes Tab Panel (Staff/Admin only) */}
-                {activeTab === "notes" && isStaff && (
-                  <div>
-                    <div
-                      style={{
-                        backgroundColor: "#FEFCBF",
-                        border: "1px solid #D69E2E",
-                        color: "#744210",
-                        padding: "10px 14px",
-                        borderRadius: "var(--radius-sm)",
-                        fontSize: "13px",
-                        marginBottom: "16px",
-                      }}
-                    >
-                      🔒 <strong>Confidential Internal Notes</strong> — Visible strictly to IT Staff and Administrators. Requesters cannot view these notes.
-                    </div>
-
-                    <div data-testid="notes-feed" style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "20px" }}>
-                      {!Array.isArray(notes) || notes.length === 0 ? (
-                        <p style={{ color: "var(--color-text-muted)", fontSize: "14px", fontStyle: "italic" }}>
-                          No confidential internal notes recorded yet.
-                        </p>
-                      ) : (
-                        notes.map((n) => (
-                          <div
-                            key={n.id}
-                            style={{
-                              padding: "12px 16px",
-                              border: "1px solid #F6E05E",
-                              borderRadius: "var(--radius-sm)",
-                              backgroundColor: "#FFFFF0",
-                            }}
-                          >
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
-                              <div style={{ display: "flex", alignItems: "center" }}>
-                                <span style={{ fontWeight: 600, fontSize: "14px", color: "#744210" }}>
-                                  👤 {n.author?.name || "Staff Member"}
-                                </span>
-                                {n.author?.role === "IT_STAFF" && (
-                                  <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
-                                    IT Staff
-                                  </span>
-                                )}
-                                {n.author?.role === "ADMINISTRATOR" && (
-                                  <span className="tt-badge" style={{ backgroundColor: "#FAF5FF", color: "#6B46C1", border: "1px solid #B794F4", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
-                                    Admin
-                                  </span>
-                                )}
-                              </div>
-                              <span style={{ fontSize: "12px", color: "#975A16" }}>{formatDate(n.createdAt)}</span>
-                            </div>
-                            <p style={{ margin: 0, fontSize: "14px", whiteSpace: "pre-wrap", color: "#2D3748", lineHeight: 1.5 }}>{n.content}</p>
+                {!feedCollapsed && (
+                  <>
+                    {/* Comments Panel */}
+                    {activeTab === "comments" && (
+                      <div>
+                        {/* Add Comment Form (Persistent ON TOP before list) */}
+                        <div className="tt-form-group" style={{ marginBottom: "16px", backgroundColor: "#FAFAFA", padding: "14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--color-border)" }}>
+                          <label className="tt-label" htmlFor="public-comment-input" style={{ fontSize: "13px", marginBottom: "6px" }}>
+                            Add a Comment
+                          </label>
+                          <textarea
+                            id="public-comment-input"
+                            data-testid="comment-input"
+                            className="tt-textarea"
+                            placeholder="Write a comment..."
+                            value={commentInput}
+                            onChange={(e) => setCommentInput(e.target.value)}
+                            style={{ height: "80px", marginBottom: "8px" }}
+                          />
+                          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              data-testid="post-comment-button"
+                              className="tt-btn tt-btn-primary"
+                              style={{ height: "34px", fontSize: "13px" }}
+                              disabled={!commentInput.trim() || submittingComment}
+                              onClick={handlePostComment}
+                            >
+                              {submittingComment ? "Posting..." : "Post Comment"}
+                            </button>
                           </div>
-                        ))
-                      )}
-                    </div>
+                        </div>
 
-                    <div className="tt-form-group">
-                      <label className="tt-label" htmlFor="internal-note-input">
-                        Add Confidential Internal Note
-                      </label>
-                      <textarea
-                        id="internal-note-input"
-                        data-testid="note-input"
-                        className="tt-textarea"
-                        placeholder="Write an internal note for staff members..."
-                        value={noteInput}
-                        onChange={(e) => setNoteInput(e.target.value)}
-                        style={{ height: "90px" }}
-                      />
-                    </div>
-                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                      <button
-                        type="button"
-                        data-testid="post-note-button"
-                        className="tt-btn tt-btn-primary"
-                        style={{ backgroundColor: "#D69E2E", borderColor: "#D69E2E" }}
-                        disabled={!noteInput.trim() || submittingNote}
-                        onClick={handlePostNote}
-                      >
-                        {submittingNote ? "Saving..." : "Add Internal Note"}
-                      </button>
-                    </div>
-                  </div>
+                        {/* Paginated Comments Feed Sorted Descending (Newest First, Max 10 per page) */}
+                        <div data-testid="comments-feed" style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px" }}>
+                          {!Array.isArray(comments) || comments.length === 0 ? (
+                            <p style={{ color: "var(--color-text-muted)", fontSize: "14px", fontStyle: "italic", margin: 0 }}>
+                              No comments posted yet.
+                            </p>
+                          ) : (
+                            [...comments]
+                              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                              .slice((commentsPage - 1) * COMMENTS_PER_PAGE, commentsPage * COMMENTS_PER_PAGE)
+                              .map((comm) => (
+                                <div
+                                  key={comm.id}
+                                  style={{
+                                    padding: "12px 16px",
+                                    border: "1px solid var(--color-border)",
+                                    borderRadius: "var(--radius-sm)",
+                                    backgroundColor: "var(--color-surface)",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                      <span style={{ fontWeight: 600, fontSize: "14px" }}>
+                                        {comm.author?.name || "Unknown Author"}
+                                      </span>
+                                      {comm.author?.role === "IT_STAFF" && (
+                                        <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                          IT Staff
+                                        </span>
+                                      )}
+                                      {comm.author?.role === "ADMINISTRATOR" && (
+                                        <span className="tt-badge" style={{ backgroundColor: "#FAF5FF", color: "#6B46C1", border: "1px solid #B794F4", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                          Admin
+                                        </span>
+                                      )}
+                                      {comm.author?.role === "REQUESTER" && (
+                                        <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                          Requester
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>{formatDate(comm.createdAt)}</span>
+                                  </div>
+                                  <p style={{ margin: 0, fontSize: "14px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{comm.content}</p>
+                                </div>
+                              ))
+                          )}
+                        </div>
+
+                        {/* Comments Pagination (Max 10 per page) */}
+                        {Math.ceil(comments.length / COMMENTS_PER_PAGE) > 1 && (
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "12px", borderTop: "1px solid var(--color-border)" }}>
+                            <span style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+                              Page {commentsPage} of {Math.ceil(comments.length / COMMENTS_PER_PAGE)} ({comments.length} total)
+                            </span>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              <button
+                                type="button"
+                                className="tt-btn tt-btn-outline"
+                                onClick={() => setCommentsPage((p) => Math.max(1, p - 1))}
+                                disabled={commentsPage === 1}
+                                style={{ height: "30px", padding: "0 10px", fontSize: "12px" }}
+                              >
+                                &larr; Previous
+                              </button>
+                              <button
+                                type="button"
+                                className="tt-btn tt-btn-outline"
+                                onClick={() => setCommentsPage((p) => Math.min(Math.ceil(comments.length / COMMENTS_PER_PAGE), p + 1))}
+                                disabled={commentsPage === Math.ceil(comments.length / COMMENTS_PER_PAGE)}
+                                style={{ height: "30px", padding: "0 10px", fontSize: "12px" }}
+                              >
+                                Next &rarr;
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Confidential Internal Notes Tab Panel (Staff/Admin only) */}
+                    {activeTab === "notes" && isStaff && (
+                      <div>
+                        <div
+                          style={{
+                            backgroundColor: "#FEFCBF",
+                            border: "1px solid #D69E2E",
+                            color: "#744210",
+                            padding: "10px 14px",
+                            borderRadius: "var(--radius-sm)",
+                            fontSize: "13px",
+                            marginBottom: "16px",
+                          }}
+                        >
+                          🔒 <strong>Confidential Internal Notes</strong> — Visible strictly to IT Staff and Administrators. Requesters cannot view these notes.
+                        </div>
+
+                        {/* Add Internal Note Form (Persistent ON TOP before list) */}
+                        <div className="tt-form-group" style={{ marginBottom: "16px", backgroundColor: "#FFFFF0", padding: "14px", borderRadius: "var(--radius-sm)", border: "1px solid #F6E05E" }}>
+                          <label className="tt-label" htmlFor="internal-note-input" style={{ fontSize: "13px", marginBottom: "6px", color: "#744210" }}>
+                            Add Confidential Internal Note
+                          </label>
+                          <textarea
+                            id="internal-note-input"
+                            data-testid="note-input"
+                            className="tt-textarea"
+                            placeholder="Write an internal note for staff members..."
+                            value={noteInput}
+                            onChange={(e) => setNoteInput(e.target.value)}
+                            style={{ height: "80px", marginBottom: "8px", backgroundColor: "#FFFFFF" }}
+                          />
+                          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                            <button
+                              type="button"
+                              data-testid="post-note-button"
+                              className="tt-btn tt-btn-primary"
+                              style={{ backgroundColor: "#D69E2E", borderColor: "#D69E2E", height: "34px", fontSize: "13px" }}
+                              disabled={!noteInput.trim() || submittingNote}
+                              onClick={handlePostNote}
+                            >
+                              {submittingNote ? "Saving..." : "Add Internal Note"}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Paginated Notes Feed Sorted Descending (Newest First, Max 10 per page) */}
+                        <div data-testid="notes-feed" style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px" }}>
+                          {!Array.isArray(notes) || notes.length === 0 ? (
+                            <p style={{ color: "var(--color-text-muted)", fontSize: "14px", fontStyle: "italic", margin: 0 }}>
+                              No confidential internal notes recorded yet.
+                            </p>
+                          ) : (
+                            [...notes]
+                              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                              .slice((notesPage - 1) * NOTES_PER_PAGE, notesPage * NOTES_PER_PAGE)
+                              .map((n) => (
+                                <div
+                                  key={n.id}
+                                  style={{
+                                    padding: "12px 16px",
+                                    border: "1px solid #F6E05E",
+                                    borderRadius: "var(--radius-sm)",
+                                    backgroundColor: "#FFFFF0",
+                                  }}
+                                >
+                                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px" }}>
+                                    <div style={{ display: "flex", alignItems: "center" }}>
+                                      <span style={{ fontWeight: 600, fontSize: "14px", color: "#744210" }}>
+                                        👤 {n.author?.name || "Staff Member"}
+                                      </span>
+                                      {n.author?.role === "IT_STAFF" && (
+                                        <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                          IT Staff
+                                        </span>
+                                      )}
+                                      {n.author?.role === "ADMINISTRATOR" && (
+                                        <span className="tt-badge" style={{ backgroundColor: "#FAF5FF", color: "#6B46C1", border: "1px solid #B794F4", fontSize: "11px", marginLeft: "6px", padding: "2px 6px" }}>
+                                          Admin
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span style={{ fontSize: "12px", color: "#975A16" }}>{formatDate(n.createdAt)}</span>
+                                  </div>
+                                  <p style={{ margin: 0, fontSize: "14px", whiteSpace: "pre-wrap", color: "#2D3748", lineHeight: 1.5 }}>{n.content}</p>
+                                </div>
+                              ))
+                          )}
+                        </div>
+
+                        {/* Notes Pagination (Max 10 per page) */}
+                        {Math.ceil(notes.length / NOTES_PER_PAGE) > 1 && (
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "12px", borderTop: "1px solid var(--color-border)" }}>
+                            <span style={{ fontSize: "12px", color: "var(--color-text-muted)" }}>
+                              Page {notesPage} of {Math.ceil(notes.length / NOTES_PER_PAGE)} ({notes.length} total)
+                            </span>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                              <button
+                                type="button"
+                                className="tt-btn tt-btn-outline"
+                                onClick={() => setNotesPage((p) => Math.max(1, p - 1))}
+                                disabled={notesPage === 1}
+                                style={{ height: "30px", padding: "0 10px", fontSize: "12px" }}
+                              >
+                                &larr; Previous
+                              </button>
+                              <button
+                                type="button"
+                                className="tt-btn tt-btn-outline"
+                                onClick={() => setNotesPage((p) => Math.min(Math.ceil(notes.length / NOTES_PER_PAGE), p + 1))}
+                                disabled={notesPage === Math.ceil(notes.length / NOTES_PER_PAGE)}
+                                style={{ height: "30px", padding: "0 10px", fontSize: "12px" }}
+                              >
+                                Next &rarr;
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>

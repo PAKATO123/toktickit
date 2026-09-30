@@ -64,7 +64,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       <header className="tt-header">
         <div className="tt-header-inner">
           <Link
-            to={user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR" ? "/staff/queue" : "/tickets"}
+            to={
+              user?.role === "ADMINISTRATOR"
+                ? "/admin/dashboard"
+                : user?.role === "IT_STAFF"
+                ? "/staff/dashboard"
+                : "/requester/dashboard"
+            }
             className="tt-brand"
             aria-label="TokTickIT Home"
           >
@@ -75,7 +81,15 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             {showRequesterNav && (
               <>
                 <NavLink
-                  to="/tickets"
+                  to="/requester/dashboard"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  Dashboard
+                </NavLink>
+                <NavLink
+                  to="/requester/tickets"
                   className={({ isActive }) =>
                     `tt-nav-link ${isActive ? "active" : ""}`
                   }
@@ -84,7 +98,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   My Tickets
                 </NavLink>
                 <NavLink
-                  to="/tickets/new"
+                  to="/requester/tickets/new"
                   className={({ isActive }) =>
                     `tt-nav-link ${isActive ? "active" : ""}`
                   }
@@ -93,25 +107,55 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 </NavLink>
               </>
             )}
-            {(user?.role === "IT_STAFF" || user?.role === "ADMINISTRATOR") && (
-              <NavLink
-                to="/staff/queue"
-                className={({ isActive }) =>
-                  `tt-nav-link ${isActive ? "active" : ""}`
-                }
-              >
-                Staff Queue
-              </NavLink>
+
+            {user?.role === "IT_STAFF" && (
+              <>
+                <NavLink
+                  to="/staff/dashboard"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  Dashboard
+                </NavLink>
+                <NavLink
+                  to="/staff/queue"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  Staff Queue
+                </NavLink>
+              </>
             )}
+
             {user?.role === "ADMINISTRATOR" && (
-              <NavLink
-                to="/admin/users"
-                className={({ isActive }) =>
-                  `tt-nav-link ${isActive ? "active" : ""}`
-                }
-              >
-                Users
-              </NavLink>
+              <>
+                <NavLink
+                  to="/admin/dashboard"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  Dashboard
+                </NavLink>
+                <NavLink
+                  to="/staff/queue"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  Staff Queue
+                </NavLink>
+                <NavLink
+                  to="/admin/users"
+                  className={({ isActive }) =>
+                    `tt-nav-link ${isActive ? "active" : ""}`
+                  }
+                >
+                  User Management
+                </NavLink>
+              </>
             )}
           </nav>
 

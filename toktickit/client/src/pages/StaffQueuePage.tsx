@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
   getStaffQueue,
@@ -21,6 +21,7 @@ export interface PaginationMeta {
 
 export const StaffQueuePage: React.FC = () => {
   const { user } = useAuth();
+  const location = useLocation();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);
@@ -34,15 +35,86 @@ export const StaffQueuePage: React.FC = () => {
   // Search & Filter Controls
   const [search, setSearch] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [priorityFilter, setPriorityFilter] = useState<string>("");
-  const [assignmentFilter, setAssignmentFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const statusParam = params.get("status");
+    if (statusParam === "WAITING_FOR_REQUESTER" || statusParam === "waiting_for_requester") {
+      return "Waiting for Requester";
+    }
+    return statusParam || "";
+  });
+  const [priorityFilter, setPriorityFilter] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const priorityParam = params.get("priority");
+    if (priorityParam === "high_urgent") return "high_urgent";
+    return priorityParam || "";
+  });
+  const [assignmentFilter, setAssignmentFilter] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("assignment") || "all";
+  });
+  const [followUpFilter, setFollowUpFilter] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("followUp") || "";
+  });
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [systemFilter, setSystemFilter] = useState<string>("");
 
+  // Sync URL query parameters for drill-down filters from Staff / Admin Dashboard
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const statusParam = params.get("status");
+    const assignmentParam = params.get("assignment");
+    const priorityParam = params.get("priority");
+    const followUpParam = params.get("followUp");
+    const sortByParam = params.get("sortBy");
+    const sortDirParam = params.get("sortDirection");
+
+    if (statusParam) {
+      if (statusParam === "WAITING_FOR_REQUESTER" || statusParam === "waiting_for_requester") {
+        setStatusFilter("Waiting for Requester");
+      } else {
+        setStatusFilter(statusParam);
+      }
+    } else {
+      setStatusFilter("");
+    }
+
+    if (assignmentParam) {
+      setAssignmentFilter(assignmentParam);
+    } else {
+      setAssignmentFilter("all");
+    }
+
+    if (priorityParam) {
+      if (priorityParam === "high_urgent") {
+        setPriorityFilter("high_urgent");
+      } else {
+        setPriorityFilter(priorityParam);
+      }
+    } else {
+      setPriorityFilter("");
+    }
+
+    if (followUpParam) {
+      setFollowUpFilter(followUpParam);
+    } else {
+      setFollowUpFilter("");
+    }
+
+    setSortBy(sortByParam || "itPriority");
+    setSortDirection(sortDirParam || "desc");
+  }, [location.search]);
+
   // Sort & Pagination Controls
-  const [sortBy, setSortBy] = useState<string>("createdAt");
-  const [sortDirection, setSortDirection] = useState<string>("desc");
+  const [sortBy, setSortBy] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("sortBy") || "itPriority";
+  });
+  const [sortDirection, setSortDirection] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("sortDirection") || "desc";
+  });
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
 
@@ -91,6 +163,7 @@ export const StaffQueuePage: React.FC = () => {
         status: statusFilter,
         itPriority: priorityFilter,
         assignment: assignmentFilter,
+        followUp: followUpFilter,
         categoryId: categoryFilter,
         relatedSystemId: systemFilter,
         sortBy,
@@ -113,6 +186,7 @@ export const StaffQueuePage: React.FC = () => {
     statusFilter,
     priorityFilter,
     assignmentFilter,
+    followUpFilter,
     categoryFilter,
     systemFilter,
     sortBy,
@@ -143,9 +217,9 @@ export const StaffQueuePage: React.FC = () => {
         <span
           className="tt-badge"
           data-testid="status-badge"
-          style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}
+          style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600, whiteSpace: "nowrap" }}
         >
-          Pending Verification
+          Pending
         </span>
       );
     }
@@ -155,14 +229,14 @@ export const StaffQueuePage: React.FC = () => {
         <span
           className="tt-badge"
           data-testid="status-badge"
-          style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED" }}
+          style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", whiteSpace: "nowrap" }}
         >
           Open
         </span>
       );
     if (lower === "in progress")
       return (
-        <span className="tt-badge tt-badge-medium" data-testid="status-badge">
+        <span className="tt-badge tt-badge-medium" data-testid="status-badge" style={{ whiteSpace: "nowrap" }}>
           In Progress
         </span>
       );
@@ -171,9 +245,9 @@ export const StaffQueuePage: React.FC = () => {
         <span
           className="tt-badge"
           data-testid="status-badge"
-          style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E" }}
+          style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", whiteSpace: "nowrap" }}
         >
-          Waiting for Requester
+          Waiting
         </span>
       );
     if (lower === "reopened")
@@ -181,7 +255,7 @@ export const StaffQueuePage: React.FC = () => {
         <span
           className="tt-badge"
           data-testid="status-badge"
-          style={{ backgroundColor: "#FEE2E2", color: "#991B1B", border: "1px solid #F87171" }}
+          style={{ backgroundColor: "#FEE2E2", color: "#991B1B", border: "1px solid #F87171", whiteSpace: "nowrap" }}
         >
           Reopened
         </span>
@@ -191,7 +265,7 @@ export const StaffQueuePage: React.FC = () => {
         <span
           className="tt-badge"
           data-testid="status-badge"
-          style={{ backgroundColor: "#E6FFFA", color: "#234E52", border: "1px solid #319795" }}
+          style={{ backgroundColor: "#E6FFFA", color: "#234E52", border: "1px solid #319795", whiteSpace: "nowrap" }}
         >
           Resolved
         </span>
@@ -201,7 +275,7 @@ export const StaffQueuePage: React.FC = () => {
         <span
           className="tt-badge"
           data-testid="status-badge"
-          style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0" }}
+          style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0", whiteSpace: "nowrap" }}
         >
           Closed
         </span>
@@ -211,12 +285,12 @@ export const StaffQueuePage: React.FC = () => {
         <span
           className="tt-badge"
           data-testid="status-badge"
-          style={{ backgroundColor: "#E2E8F0", color: "#718096", border: "1px solid #A0AEC0" }}
+          style={{ backgroundColor: "#E2E8F0", color: "#718096", border: "1px solid #A0AEC0", whiteSpace: "nowrap" }}
         >
           Cancelled
         </span>
       );
-    return <span className="tt-badge" data-testid="status-badge">{status}</span>;
+    return <span className="tt-badge" data-testid="status-badge" style={{ whiteSpace: "nowrap" }}>{status}</span>;
   };
 
   const renderPriorityBadge = (priority: string | null) => {
@@ -335,6 +409,7 @@ export const StaffQueuePage: React.FC = () => {
               }}
             >
               <option value="">All Priorities</option>
+              <option value="high_urgent">Urgent & High Priority</option>
               <option value="Urgent">Urgent</option>
               <option value="High">High</option>
               <option value="Medium">Medium</option>
@@ -363,8 +438,8 @@ export const StaffQueuePage: React.FC = () => {
           </div>
         </div>
 
-        {/* Secondary Filters (Category & Related System & Permanent Clear Filters) */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+        {/* Secondary Filters (Category, Related System, Follow-Up & Clear Filters - 4 per line) */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
           <div className="tt-form-group" style={{ marginBottom: 0 }}>
             <label className="tt-label" htmlFor="category-filter-select">Category</label>
             <select
@@ -403,6 +478,25 @@ export const StaffQueuePage: React.FC = () => {
             </select>
           </div>
 
+          {/* Follow-Up Filter Dropdown */}
+          <div className="tt-form-group" style={{ marginBottom: 0 }}>
+            <label className="tt-label" htmlFor="followup-filter-select">Follow-Up</label>
+            <select
+              id="followup-filter-select"
+              className="tt-select"
+              data-testid="followup-filter"
+              value={followUpFilter}
+              onChange={(e) => {
+                setFollowUpFilter(e.target.value);
+                setPage(1);
+              }}
+            >
+              <option value="">All Follow-Up</option>
+              <option value="required">Follow-Up Required</option>
+              <option value="none">No Follow-Up</option>
+            </select>
+          </div>
+
           {/* Permanent Reset Filters Action Button */}
           <div className="tt-form-group" style={{ marginBottom: 0, display: "flex", alignItems: "flex-end" }}>
             <button
@@ -422,6 +516,7 @@ export const StaffQueuePage: React.FC = () => {
                 setStatusFilter("");
                 setPriorityFilter("");
                 setAssignmentFilter("all");
+                setFollowUpFilter("");
                 setCategoryFilter("");
                 setSystemFilter("");
                 setPage(1);
@@ -462,48 +557,49 @@ export const StaffQueuePage: React.FC = () => {
           <div style={{ overflowX: "auto" }}>
             <table className="tt-table" data-testid="staff-queue-table" style={{ width: "100%", tableLayout: "fixed", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ backgroundColor: "#F7FAFC", borderBottom: "1px solid var(--color-border)" }}>
-                  <th style={{ padding: "12px 16px", textAlign: "left", width: "24%" }}>
+                <tr style={{ backgroundColor: "#F7FAFC", borderBottom: "1px solid var(--color-border)", color: "var(--color-text-muted)" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "26%", color: "var(--color-text-muted)", fontSize: "13px", fontWeight: 600 }}>
                     <button
                       type="button"
                       data-testid="sort-ticketNumber"
-                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", color: sortBy === "ticketNumber" ? "var(--color-primary-green)" : "var(--color-text-muted)" }}
                       onClick={() => handleSort("ticketNumber")}
                     >
                       Ticket # {sortBy === "ticketNumber" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </button>
                   </th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", width: "15%" }}>Requester</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", width: "17%" }}>Category / System</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", width: "11%" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "var(--color-text-muted)", width: "16%" }}>Requester</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "var(--color-text-muted)", width: "16%" }}>Category / System</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "11%", color: "var(--color-text-muted)", fontSize: "13px", fontWeight: 600 }}>
                     <button
                       type="button"
                       data-testid="sort-itPriority"
-                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", whiteSpace: "nowrap" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", color: sortBy === "itPriority" ? "var(--color-primary-green)" : "var(--color-text-muted)", whiteSpace: "nowrap" }}
                       onClick={() => handleSort("itPriority")}
                     >
                       IT Priority {sortBy === "itPriority" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </button>
                   </th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", width: "15%" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "11%", color: "var(--color-text-muted)", fontSize: "13px", fontWeight: 600 }}>
                     <button
                       type="button"
                       data-testid="sort-currentStatus"
-                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", whiteSpace: "nowrap" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", color: sortBy === "currentStatus" ? "var(--color-primary-green)" : "var(--color-text-muted)", whiteSpace: "nowrap" }}
                       onClick={() => handleSort("currentStatus")}
                     >
                       Status {sortBy === "currentStatus" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </button>
                   </th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", width: "13%" }}>Assignee</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", width: "10%" }}>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "var(--color-text-muted)", width: "12%" }}>Follow-up<br />Required</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px", fontWeight: 600, color: "var(--color-text-muted)", width: "12%" }}>Assignee</th>
+                  <th style={{ padding: "12px 16px", textAlign: "left", width: "12%", color: "var(--color-text-muted)", fontSize: "13px", fontWeight: 600 }}>
                     <button
                       type="button"
-                      data-testid="sort-createdAt"
-                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", whiteSpace: "nowrap" }}
-                      onClick={() => handleSort("createdAt")}
+                      data-testid="sort-updatedAt"
+                      style={{ background: "none", border: "none", cursor: "pointer", fontWeight: 600, padding: 0, fontSize: "13px", color: sortBy === "updatedAt" ? "var(--color-primary-green)" : "var(--color-text-muted)", whiteSpace: "nowrap" }}
+                      onClick={() => handleSort("updatedAt")}
                     >
-                      Submitted {sortBy === "createdAt" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
+                      Last Updated {sortBy === "updatedAt" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </button>
                   </th>
                 </tr>
@@ -513,12 +609,14 @@ export const StaffQueuePage: React.FC = () => {
                   <tr
                     key={ticket.id}
                     data-testid={`ticket-row-${ticket.id}`}
-                    style={{ borderBottom: "1px solid var(--color-border)", transition: "background-color 0.15s" }}
+                    style={{ borderBottom: "1px solid var(--color-border)", transition: "background-color 0.15s ease", cursor: "pointer" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--color-pale-green)")}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                   >
                     <td style={{ padding: "12px 16px", overflow: "hidden", textOverflow: "ellipsis" }}>
                       <Link
                         to={`/tickets/${ticket.id}`}
-                        style={{ fontWeight: 600, textDecoration: "none", color: "var(--color-primary)" }}
+                        style={{ fontWeight: 600, textDecoration: "none", color: "var(--color-primary-green)" }}
                       >
                         {ticket.ticketNumber}
                       </Link>
@@ -548,6 +646,13 @@ export const StaffQueuePage: React.FC = () => {
                     <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
                       {renderStatusBadge(ticket.currentStatus, ticket.isRequesterResolved)}
                     </td>
+                    <td style={{ padding: "12px 16px", whiteSpace: "nowrap" }}>
+                      {ticket.hasFollowUpRequired ? (
+                        <span style={{ color: "#744210", fontWeight: 600, fontSize: "13px" }}>Yes</span>
+                      ) : (
+                        <span style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>No</span>
+                      )}
+                    </td>
                     <td style={{ padding: "12px 16px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {ticket.assignedTo ? (
                         <span style={{ fontSize: "13px", fontWeight: 500, color: "#2B6CB0" }}>
@@ -560,7 +665,7 @@ export const StaffQueuePage: React.FC = () => {
                       )}
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: "13px", color: "var(--color-text-muted)", whiteSpace: "nowrap" }}>
-                      {formatDate(ticket.createdAt)}
+                      {formatDate(ticket.updatedAt || ticket.createdAt)}
                     </td>
                   </tr>
                 ))}
