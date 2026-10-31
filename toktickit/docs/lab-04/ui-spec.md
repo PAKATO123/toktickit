@@ -62,28 +62,30 @@ The top navigation app bar (`AppShell`) provides uniform role-based route namesp
   4. `Recently Resolved`: Top 5 tickets resolved recently. Click navigates to `/requester/tickets?filter=resolved`.
 - **Quick Action Row**: Prominent primary button `+ Create New Ticket` (`/requester/tickets/new`) and `View All My Tickets` (`/requester/tickets`).
 
-### Screen 3: Actions Taken Component on Ticket Detail View
+### Screen 3: Actions Taken & Activity Feed Components on Ticket Detail View
 - **Location**: Rendered within the Ticket Detail screen (`/requester/tickets/:id` for Requesters; `/staff/tickets/:id` for Staff/Admins).
-- **Header Toolbar**: Title "Actions Taken", item counter badge (e.g. `[3 Actions]`), and "+ Add Action Taken" button (IT Staff/Admin only).
-- **Actions Taken Table / Card List**:
-  - Columns / Fields:
-    1. `Action Date`: Formatted timestamp (e.g., `Sep 28, 2026, 14:30`).
-    2. `Description`: Full text of action performed.
-    3. `Result`: Outcome text.
-    4. `Performed By`: Staff member name badge.
-    5. `Follow-Up`: Pill badge (`Follow-Up Required` vs `No Follow-Up`).
-    6. `Follow-up Note`: Displayed when follow-up is required.
-    7. `Attachment Notes`: Displayed when file/image references are noted.
-    8. `Actions`: "Edit" button (IT Staff/Admin).
-- **Add / Edit Action Taken Drawer/Modal**:
-  - `Action Date/Time` input (defaults to current time).
-  - `Action Description` textarea (Required).
-  - `Result` textarea (Required).
-  - `Follow-Up Required` checkbox toggle.
-  - `Follow-Up Note` textarea (Required when checkbox checked; live inline validation).
-  - `Attachment Notes` text input.
-  - Buttons: `Save Action Taken` (Primary Zen Green) and `Cancel`.
-- **Requester Mode**: Displays complete list of Actions Taken in clean read-only cards without Add/Edit buttons.
+- **Actions Taken Section**:
+  - **Collapsible Header**: Includes collapse/expand toggle arrow (`▼`/`▶`), title "Actions Taken", plain text record counter (e.g., `(10 Records)` — plain text with no pill badge frame), and `+ Add Action Taken` button (IT Staff/Admin only).
+  - **Pagination**: Max 5 records per page with single-line bottom pagination bar (`Page X of Y`).
+  - **Card Layout**: Each action is displayed inside a bordered card.
+  - **Bordered Text Areas**: `Action Description` and `Result / Outcome` text blocks are rendered in distinct individual bordered text boxes (`1px solid var(--color-border)`, light neutral background).
+  - **Add / Edit Action Taken Modal**:
+    - `Action Date/Time` input (defaults to current time).
+    - `Action Description` textarea (Required, min 3 chars).
+    - `Result` textarea (Required, min 3 chars).
+    - `Follow-Up Required` checkbox toggle.
+    - `Follow-Up Note` textarea (Required when checked).
+    - `Attachment Notes` text input.
+    - Buttons: `Save Action` (Primary Zen Green) and `Cancel`.
+- **Comments & Confidential Notes Activity Feed**:
+  - **Header Structure**: Matches Actions Taken header design base with collapse/expand toggle arrow (`▼`/`▶`), title "Comments", and plain text count `(X Comments)`.
+  - **Role-Based Control Strip**: For IT Staff and Administrators, a tab switcher control (`Comments` vs `Confidential Internal Notes`) is rendered directly below the section header. For Requesters, this control strip is completely invisible.
+  - **Sorting**: Comments and Internal Notes are sorted in descending order (newest to oldest).
+  - **Persistent Top Input Form**: `Add a Comment` form is positioned at the top above the comment list, persistent across page switches.
+  - **Pagination**: Max 10 comments per page with single-line bottom pagination controls.
+  - **Confidential Internal Notes**: Staff/Admin-only tab with yellow accent theme, persistent top note form, and 10-per-page pagination.
+- **Autofilled Date & Time**:
+  - `Action Date & Time` in Actions Taken modal autofills using local system timezone (`YYYY-MM-DDTHH:mm`).
 
 ### Screen 4: Administrator Dashboard (`/admin/dashboard`)
 - **Header**: Welcome banner + Quick switch links.

@@ -582,3 +582,92 @@ export async function resetUserInitialPassword(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Actions Taken API Calls (Lab 4 Sprint)
+// ---------------------------------------------------------------------------
+
+export interface ActionTaken {
+  id: number;
+  ticketId: number;
+  actionDate: string;
+  description: string;
+  result: string;
+  performedById: number;
+  performedBy: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
+  followUpRequired: boolean;
+  followUpNote?: string | null;
+  attachmentNotes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateActionTakenPayload {
+  actionDate?: string;
+  description: string;
+  result: string;
+  followUpRequired: boolean;
+  followUpNote?: string;
+  attachmentNotes?: string;
+}
+
+export async function getActionsTaken(ticketId: number): Promise<ActionTaken[]> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/actions-taken`, {
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to fetch Actions Taken.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.actionsTaken || [];
+}
+
+export async function createActionTaken(
+  ticketId: number,
+  payload: CreateActionTakenPayload
+): Promise<ActionTaken> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/actions-taken`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to create Action Taken.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.actionTaken;
+}
+
+export async function updateActionTaken(
+  ticketId: number,
+  actionId: number,
+  payload: CreateActionTakenPayload
+): Promise<ActionTaken> {
+  const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/actions-taken/${actionId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    const error: any = new Error(json.error?.message || "Unable to update Action Taken.");
+    error.status = res.status;
+    error.code = json.error?.code;
+    throw error;
+  }
+  return json.actionTaken;
+}
+
+

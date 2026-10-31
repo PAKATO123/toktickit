@@ -1646,7 +1646,7 @@ app.get("/api/tickets/:id/comments", requireAuth, async (req: Request, res: Resp
       include: {
         author: { select: { id: true, name: true, role: true, email: true } },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
     });
 
     return res.status(200).json({ data: comments });
@@ -1749,7 +1749,7 @@ app.get("/api/tickets/:id/notes", requireAuth, requireRole("IT_STAFF", "ADMINIST
       include: {
         author: { select: { id: true, name: true, role: true, email: true } },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: "desc" },
     });
 
     return res.status(200).json({ data: notes });
@@ -2100,6 +2100,229 @@ app.post("/api/users/:id/reset-password", requireAuth, requireRole("ADMINISTRATO
     });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Actions Taken APIs (Lab 4 Sprint)
+// ---------------------------------------------------------------------------
+
+// GET /api/tickets/:ticketId/actions-taken
+app.get("/api/tickets/:ticketId/actions-taken", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const ticketId = parseInt(req.params.ticketId, 10);
+    if (isNaN(ticketId)) {
+      return res.status(400).json({ error: { code: "INVALID_ID", message: "Invalid ticket ID format." } });
+    }
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { id: true, requesterId: true },
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: { code: "NOT_FOUND", message: "Ticket not found." } });
+    }
+
+    const currentUser = req.session.user!;
+    if (currentUser.role === "REQUESTER" && ticket.requesterId !== currentUser.id) {
+      return res.status(403).json({ error: { code: "FORBIDDEN", message: "Access denied." } });
+    }
+
+    const actionsTaken = await prisma.actionTaken.findMany({
+      where: { ticketId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        performedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json({ actionsTaken });
+  } catch (error) {
+    console.error("Error fetching Actions Taken:", error);
+    return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Unable to fetch Actions Taken." } });
+  }
+});
+
+// POST /api/tickets/:ticketId/actions-taken
+app.post(
+  "/api/tickets/:ticketId/actions-taken",
+  requireAuth,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: Request, res: Response) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId, 10);
+      if (isNaN(ticketId)) {
+        return res.status(400).json({ error: { code: "INVALID_ID", message: "Invalid ticket ID format." } });
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: ticketId },
+      });
+
+      if (!ticket) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Ticket not found." } });
+      }
+
+      if (ticket.currentStatus === "Cancelled") {
+        return res.status(400).json({
+          error: { code: "TERMINAL_TICKET", message: "Cannot add Action Taken to a Cancelled ticket." },
+        });
+      }
+
+      const { actionDate, description, result, followUpRequired, followUpNote, attachmentNotes } = req.body;
+
+      if (!description || String(description).trim().length < 3) {
+        return res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Action description is required (min 3 characters)." },
+        });
+      }
+
+      if (!result || String(result).trim().length < 3) {
+        return res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Action result is required (min 3 characters)." },
+        });
+      }
+
+      const isFollowUpReq = Boolean(followUpRequired);
+      const followNoteStr = followUpNote ? String(followUpNote).trim() : "";
+
+      if (isFollowUpReq && followNoteStr.length === 0) {
+        return res.status(400).json({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Follow-up note is required when follow-up is requested.",
+          },
+        });
+      }
+
+      const performedById = req.session.user!.id;
+      const parsedActionDate = actionDate ? new Date(actionDate) : new Date();
+
+      const actionTaken = await prisma.actionTaken.create({
+        data: {
+          ticketId,
+          performedById,
+          actionDate: isNaN(parsedActionDate.getTime()) ? new Date() : parsedActionDate,
+          description: String(description).trim(),
+          result: String(result).trim(),
+          followUpRequired: isFollowUpReq,
+          followUpNote: isFollowUpReq ? followNoteStr : null,
+          attachmentNotes: attachmentNotes ? String(attachmentNotes).trim() : null,
+        },
+        include: {
+          performedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+      });
+
+      return res.status(201).json({ actionTaken });
+    } catch (error) {
+      console.error("Error creating Action Taken:", error);
+      return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Unable to create Action Taken." } });
+    }
+  }
+);
+
+// PUT /api/tickets/:ticketId/actions-taken/:actionId
+app.put(
+  "/api/tickets/:ticketId/actions-taken/:actionId",
+  requireAuth,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: Request, res: Response) => {
+    try {
+      const ticketId = parseInt(req.params.ticketId, 10);
+      const actionId = parseInt(req.params.actionId, 10);
+      if (isNaN(ticketId) || isNaN(actionId)) {
+        return res.status(400).json({ error: { code: "INVALID_ID", message: "Invalid ID format." } });
+      }
+
+      const prisma = getPrisma();
+      const existingAction = await prisma.actionTaken.findFirst({
+        where: { id: actionId, ticketId },
+        include: { ticket: true },
+      });
+
+      if (!existingAction) {
+        return res.status(404).json({ error: { code: "NOT_FOUND", message: "Action Taken record not found." } });
+      }
+
+      if (existingAction.ticket.currentStatus === "Cancelled") {
+        return res.status(400).json({
+          error: { code: "TERMINAL_TICKET", message: "Cannot edit Action Taken on a Cancelled ticket." },
+        });
+      }
+
+      const { actionDate, description, result, followUpRequired, followUpNote, attachmentNotes } = req.body;
+
+      if (description !== undefined && String(description).trim().length < 3) {
+        return res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Action description must be at least 3 characters." },
+        });
+      }
+
+      if (result !== undefined && String(result).trim().length < 3) {
+        return res.status(400).json({
+          error: { code: "VALIDATION_ERROR", message: "Action result must be at least 3 characters." },
+        });
+      }
+
+      const isFollowUpReq = followUpRequired !== undefined ? Boolean(followUpRequired) : existingAction.followUpRequired;
+      const followNoteStr = followUpNote !== undefined ? String(followUpNote).trim() : (existingAction.followUpNote || "");
+
+      if (isFollowUpReq && followNoteStr.length === 0) {
+        return res.status(400).json({
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Follow-up note is required when follow-up is requested.",
+          },
+        });
+      }
+
+      const parsedActionDate = actionDate ? new Date(actionDate) : existingAction.actionDate;
+
+      const updatedAction = await prisma.actionTaken.update({
+        where: { id: actionId },
+        data: {
+          actionDate: isNaN(parsedActionDate.getTime()) ? existingAction.actionDate : parsedActionDate,
+          description: description !== undefined ? String(description).trim() : existingAction.description,
+          result: result !== undefined ? String(result).trim() : existingAction.result,
+          followUpRequired: isFollowUpReq,
+          followUpNote: isFollowUpReq ? followNoteStr : null,
+          attachmentNotes: attachmentNotes !== undefined ? (attachmentNotes ? String(attachmentNotes).trim() : null) : existingAction.attachmentNotes,
+        },
+        include: {
+          performedBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+        },
+      });
+
+      return res.status(200).json({ actionTaken: updatedAction });
+    } catch (error) {
+      console.error("Error updating Action Taken:", error);
+      return res.status(500).json({ error: { code: "INTERNAL_ERROR", message: "Unable to update Action Taken." } });
+    }
+  }
+);
 
 // ---------------------------------------------------------------------------
 // Centralized Error Handling Middleware (including Multer errors)

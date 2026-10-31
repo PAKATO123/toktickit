@@ -22,11 +22,12 @@ const RELATED_SYSTEMS = [
 
 const USERS = [
   // Requesters (4 active, 1 inactive)
-  { email: "requester1@toktickit.local", name: "Alice Smith", role: "REQUESTER" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "requester2@toktickit.local", name: "Bob Johnson", role: "REQUESTER" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "requester3@toktickit.local", name: "Charlie Brown", role: "REQUESTER" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "requester4@toktickit.local", name: "Diana Prince", role: "REQUESTER" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "requester5@toktickit.local", name: "Eve Inactive", role: "REQUESTER" as const, isActive: false, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "requester1@toktickit.local", name: "Alice Smith", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "requester2@toktickit.local", name: "Bob Johnson", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "requester3@toktickit.local", name: "Charlie Brown", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "requester4@toktickit.local", name: "Diana Prince", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "requester5@toktickit.local", name: "Eve Inactive", role: "REQUESTER" as const, isActive: false, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+
 
   // IT Staff (3 active, 1 inactive)
   { email: "staff1@toktickit.local", name: "Jane Staff", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
@@ -178,10 +179,27 @@ async function main() {
         ],
         skipDuplicates: true,
       });
+
+      // 7. Seed Actions Taken for assigned tickets
+      await prisma.actionTaken.createMany({
+        data: [
+          {
+            ticketId: ticket.id,
+            performedById: assignedToId,
+            description: `Initial diagnostic inspection performed for ${tpl.summary}.`,
+            result: "Identified core root cause and performed driver reconfiguration.",
+            followUpRequired: i % 3 === 0,
+            followUpNote: i % 3 === 0 ? "Follow up with requester in 24 hours to confirm system stability under workload." : null,
+            attachmentNotes: i % 2 === 0 ? "Screenshot report saved in attachments tab (diag_result.png)." : null,
+          },
+        ],
+        skipDuplicates: true,
+      });
     }
   }
-  console.log(`Seeded ${ISSUE_TEMPLATES.length} tickets with comments and internal notes.`);
+  console.log(`Seeded ${ISSUE_TEMPLATES.length} tickets with comments, internal notes, and actions taken.`);
 }
+
 
 main()
   .catch((e) => {

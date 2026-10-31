@@ -69,3 +69,18 @@ This document highlights the key design decisions, baseline choices, and operati
   - `Recently Updated Tickets`: Top 5 system tickets ordered by `updatedAt DESC`.
 - **Administrator Dashboard** (`/admin/dashboard`):
   - Integrates all IT Staff dashboard metrics plus User Account statistics (`Total Users`, `Active Requesters`, `Active IT Staff`, `Active Admins`).
+
+### 1.6 Ticket Detail UI Refinements (Actions Taken & Comments)
+- **Actions Taken UI**:
+  - **Collapsible**: Uses standard arrow toggle (`▼`/`▶`).
+  - **Plain Text Record Count**: Displays `(X Records)` as plain text without pill/badge styling.
+  - **Pagination**: Paginated at max 5 records per page.
+  - **Bordered Text Areas**: `Action Description` and `Result / Outcome` are formatted in individual bordered container boxes (`1px solid var(--color-border)`).
+  - **Autofilled Local Datetime**: Action date and time defaults to current date/time matching local system timezone (`YYYY-MM-DDTHH:mm`).
+- **Comments & Activity Feed UI**:
+  - **Collapsible Header Base**: Matches Actions Taken header design base with arrow toggle (`▼`/`▶`), title "Comments", and plain text count `(X Comments)`.
+  - **Invisible Tab Control for Requesters**: Staff tab control strip is hidden from Requesters. Staff and Admins see a sub-header control strip to switch between `Comments` and `Confidential Internal Notes`.
+  - **Newest-First Sort Order**: Comments and Internal Notes are ordered descending (`createdAt DESC`) from newest to oldest.
+  - **Renamed Terminology**: Renamed "Public Comment" to "Comment".
+  - **Persistent Top Input Form**: The `Add a Comment` form stays at the top above comments across page changes.
+  - **Pagination**: Paginated at max 10 comments per page.
