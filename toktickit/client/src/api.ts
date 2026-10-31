@@ -372,11 +372,11 @@ export async function updateItPriority(ticketId: number, itPriority: string | nu
   return json.data;
 }
 
-export async function updateTicketStatus(ticketId: number, status: string): Promise<TicketDetailData> {
+export async function updateTicketStatus(ticketId: number, status: string, expectedUpdatedAt?: string): Promise<TicketDetailData> {
   const res = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/status`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, expectedUpdatedAt }),
     credentials: "include",
   });
   const json = await res.json();
@@ -624,6 +624,7 @@ export interface ActionTaken {
     role: string;
   };
   followUpRequired: boolean;
+  isFollowedUp: boolean;
   followUpNote?: string | null;
   attachmentNotes?: string | null;
   createdAt: string;
@@ -635,8 +636,10 @@ export interface CreateActionTakenPayload {
   description: string;
   result: string;
   followUpRequired: boolean;
+  isFollowedUp?: boolean;
   followUpNote?: string;
   attachmentNotes?: string;
+  expectedUpdatedAt?: string;
 }
 
 export async function getActionsTaken(ticketId: number): Promise<ActionTaken[]> {

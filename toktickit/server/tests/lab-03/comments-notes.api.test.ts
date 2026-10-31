@@ -41,7 +41,7 @@ describe("Lab 03 — Public Comments & Confidential Internal Notes API (comments
           ],
         },
       },
-      data: { passwordHash: defaultHash, mustChangePassword: true },
+      data: { passwordHash: defaultHash, mustChangePassword: false },
     });
     await prisma.user.update({
       where: { email: "admin@toktickit.local" },

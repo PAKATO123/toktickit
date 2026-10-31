@@ -80,8 +80,10 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
         description: action.description,
         result: action.result,
         followUpRequired: false,
+        isFollowedUp: true,
         followUpNote: action.followUpNote?.trim() ? action.followUpNote : "Followed up",
         attachmentNotes: action.attachmentNotes || undefined,
+        expectedUpdatedAt: action.updatedAt,
       });
       await fetchActions();
     } catch (err: any) {
@@ -172,8 +174,10 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
         description: description.trim(),
         result: result.trim(),
         followUpRequired,
-        followUpNote: followUpRequired ? followUpNote.trim() : (followUpNote.trim() || undefined),
+        isFollowedUp: false,
+        followUpNote: followUpRequired ? followUpNote.trim() : undefined,
         attachmentNotes: attachmentNotes.trim() || undefined,
+        expectedUpdatedAt: editingAction?.updatedAt,
       };
 
       if (editingAction) {
@@ -294,7 +298,7 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
                         <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>
                           Follow-Up Required
                         </span>
-                      ) : action.followUpNote ? (
+                      ) : action.isFollowedUp ? (
                         <span className="tt-badge" style={{ backgroundColor: "#E6FFFA", color: "#234E52", border: "1px solid #319795", fontWeight: 600 }}>
                           Followed up
                         </span>
@@ -382,6 +386,13 @@ export const ActionsTakenSection: React.FC<ActionsTakenSectionProps> = ({
                     <div style={{ marginTop: "12px", padding: "10px 12px", backgroundColor: "var(--color-warning-bg)", border: "1px solid var(--color-warning)", borderRadius: "var(--radius-sm)", fontSize: "12px" }}>
                       <span style={{ fontWeight: 600, color: "#744210" }}>Follow-Up Note:</span>{" "}
                       <span style={{ color: "#744210" }}>{action.followUpNote}</span>
+                    </div>
+                  )}
+
+                  {action.isFollowedUp && action.followUpNote && (
+                    <div style={{ marginTop: "12px", padding: "10px 12px", backgroundColor: "#E6FFFA", border: "1px solid #319795", borderRadius: "var(--radius-sm)", fontSize: "12px" }}>
+                      <span style={{ fontWeight: 600, color: "#234E52" }}>Followed up:</span>{" "}
+                      <span style={{ color: "#234E52" }}>{action.followUpNote}</span>
                     </div>
                   )}
 

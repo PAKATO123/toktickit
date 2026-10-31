@@ -36,7 +36,7 @@ describe("Lab 04 — Ticket Workflow API Integration Tests", () => {
           ],
         },
       },
-      data: { passwordHash: defaultHash, mustChangePassword: true },
+      data: { passwordHash: defaultHash, mustChangePassword: false },
     });
     await prisma.user.update({
       where: { email: "admin@toktickit.local" },
@@ -76,6 +76,23 @@ describe("Lab 04 — Ticket Workflow API Integration Tests", () => {
     expect(res.body.data).toBeDefined();
     expect(res.body.data.isRequesterResolved).toBe(true);
     expect(res.body.data.currentStatus).toBe("Pending Verification");
+  });
+
+  it("should reject stale ticket status update with 409 Conflict when expectedUpdatedAt is outdated", async () => {
+    const agentStaff = request.agent(app);
+    await agentStaff
+      .post("/api/auth/login")
+      .send({ email: "staff1@toktickit.local", password: "Password123!" });
+
+    const res = await agentStaff
+      .patch("/api/tickets/2/status")
+      .send({
+        status: "In Progress",
+        expectedUpdatedAt: new Date(Date.now() - 7200000).toISOString(),
+      });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("STALE_UPDATE_CONFLICT");
   });
 });
 

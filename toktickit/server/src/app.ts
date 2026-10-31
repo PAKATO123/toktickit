@@ -978,7 +978,7 @@ app.patch("/api/tickets/:id/status", requireAuth, requireRole("IT_STAFF", "ADMIN
       });
     }
 
-    const { status } = req.body;
+    const { status, expectedUpdatedAt, updatedAt } = req.body;
     if (!status) {
       return res.status(422).json({
         error: { code: "VALIDATION_ERROR", message: "Status is required." },
@@ -1012,6 +1012,21 @@ app.patch("/api/tickets/:id/status", requireAuth, requireRole("IT_STAFF", "ADMIN
       return res.status(404).json({
         error: { code: "TICKET_NOT_FOUND", message: "The requested ticket could not be found." },
       });
+    }
+
+    // Stale update detection
+    const clientUpdatedAt = expectedUpdatedAt || updatedAt || req.headers["if-unmodified-since"];
+    if (clientUpdatedAt) {
+      const clientTime = new Date(clientUpdatedAt).getTime();
+      const serverTime = new Date(ticket.updatedAt).getTime();
+      if (!isNaN(clientTime) && Math.abs(clientTime - serverTime) > 1000) {
+        return res.status(409).json({
+          error: {
+            code: "STALE_UPDATE_CONFLICT",
+            message: "Ticket status has been modified by another transaction. Please refresh and try again.",
+          },
+        });
+      }
     }
 
     const PERMITTED_TRANSITIONS: Record<string, string[]> = {
@@ -2560,7 +2575,8 @@ app.post(
           description: String(description).trim(),
           result: String(result).trim(),
           followUpRequired: isFollowUpReq,
-          followUpNote: followNoteStr.length > 0 ? followNoteStr : null,
+          isFollowedUp: false,
+          followUpNote: isFollowUpReq && followNoteStr.length > 0 ? followNoteStr : null,
           attachmentNotes: attachmentNotes ? String(attachmentNotes).trim() : null,
         },
         include: {
@@ -2612,7 +2628,22 @@ app.put(
         });
       }
 
-      const { actionDate, description, result, followUpRequired, followUpNote, attachmentNotes } = req.body;
+      const { actionDate, description, result, followUpRequired, isFollowedUp, followUpNote, attachmentNotes, expectedUpdatedAt, updatedAt } = req.body;
+
+      // Stale update detection (409 Conflict)
+      const clientUpdatedAt = expectedUpdatedAt || updatedAt || req.headers["if-unmodified-since"];
+      if (clientUpdatedAt) {
+        const clientTime = new Date(clientUpdatedAt).getTime();
+        const serverTime = new Date(existingAction.updatedAt).getTime();
+        if (!isNaN(clientTime) && Math.abs(clientTime - serverTime) > 1000) {
+          return res.status(409).json({
+            error: {
+              code: "STALE_UPDATE_CONFLICT",
+              message: "Action Taken record has been modified by another transaction. Please refresh and try again.",
+            },
+          });
+        }
+      }
 
       if (description !== undefined && String(description).trim().length < 3) {
         return res.status(400).json({
@@ -2627,6 +2658,14 @@ app.put(
       }
 
       const isFollowUpReq = followUpRequired !== undefined ? Boolean(followUpRequired) : existingAction.followUpRequired;
+      let isFollowedUpVal = existingAction.isFollowedUp;
+      if (isFollowedUp !== undefined) {
+        isFollowedUpVal = Boolean(isFollowedUp);
+      }
+      if (isFollowUpReq) {
+        isFollowedUpVal = false;
+      }
+
       const followNoteStr = followUpNote !== undefined ? String(followUpNote).trim() : (existingAction.followUpNote || "");
 
       if (isFollowUpReq && followNoteStr.length === 0) {
@@ -2638,6 +2677,15 @@ app.put(
         });
       }
 
+      let finalFollowUpNote: string | null = null;
+      if (isFollowUpReq) {
+        finalFollowUpNote = followNoteStr;
+      } else if (isFollowedUpVal) {
+        finalFollowUpNote = followNoteStr.length > 0 ? followNoteStr : (existingAction.followUpNote || "Followed up");
+      } else {
+        finalFollowUpNote = null;
+      }
+
       const parsedActionDate = actionDate ? new Date(actionDate) : existingAction.actionDate;
 
       const updatedAction = await prisma.actionTaken.update({
@@ -2647,7 +2695,8 @@ app.put(
           description: description !== undefined ? String(description).trim() : existingAction.description,
           result: result !== undefined ? String(result).trim() : existingAction.result,
           followUpRequired: isFollowUpReq,
-          followUpNote: followNoteStr.length > 0 ? followNoteStr : (existingAction.followUpNote || null),
+          isFollowedUp: isFollowedUpVal,
+          followUpNote: finalFollowUpNote,
           attachmentNotes: attachmentNotes !== undefined ? (attachmentNotes ? String(attachmentNotes).trim() : null) : existingAction.attachmentNotes,
         },
         include: {

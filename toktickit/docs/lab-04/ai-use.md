@@ -1,6 +1,6 @@
-# Lab 4 — AI Use and Reflection  (fill this in)
+# Lab 4 — AI Use and Reflection
 
-**LLM/agent used:** <Gemini 3.6 Flash / Antigravity Agent>
+**LLM/agent used:** Gemini 2.5 Flash / Google Antigravity Agent
 
 ## Selected key prompts (6–10)
 | # | Prompt (summarised) | What I did with the result |
@@ -17,6 +17,4 @@
 | 10 | Implement branch 4, verify with the specs, make sure everything is in place and ready to go and tell me how to verify that everything has been completed | It tells me that everything has been completed, and i proceed to verify with the specs and instructions, and it turns out it was mostly correct with few adjustment needed | 
 
 ## Reflection
-Two or three sentences: what made your prompts better, and one place you had to correct or reject what the agent produced.
-
 Overall compared to lab 3, my prompts have became more detailed and specific, however i have noticed that when i condensed my prompt for the agent to do too many tasks at once, it leads to it skipping details, forgetting some of the earlier constraints, and/or producing buggy code that are further from the specification, or just overall ugly code and UX, i really have to balance between being specific enough to avoid the previous problems and scoped down enough to avoid overwhelming the agent per each prompt.

@@ -208,7 +208,7 @@ export const TicketDetailPage: React.FC = () => {
     if (!ticket) return;
     setActionLoading(true);
     try {
-      const updated = await updateTicketStatus(ticket.id, status);
+      const updated = await updateTicketStatus(ticket.id, status, ticket.updatedAt);
       setTicket(updated);
       setToastMessage(`Status updated to '${status}'.`);
     } catch (err: any) {
