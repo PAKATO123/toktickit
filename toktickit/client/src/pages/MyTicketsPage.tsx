@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useRequester } from "../context/RequesterContext";
 import { useAuth } from "../context/AuthContext";
 import { getCategories, getRelatedSystems, Category, RelatedSystem, API_BASE_URL } from "../api";
@@ -26,6 +26,7 @@ export interface PaginationMeta {
 
 export const MyTicketsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { selectedRequester } = useRequester();
 
@@ -48,16 +49,54 @@ export const MyTicketsPage: React.FC = () => {
   // Search & Filter Controls
   const [search, setSearch] = useState<string>("");
   const [debouncedSearch, setDebouncedSearch] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const statusParam = params.get("status");
+    const filterParam = params.get("filter");
+    if (statusParam) return statusParam;
+    if (filterParam === "open") return "open";
+    if (filterParam === "resolved") return "Resolved";
+    return "";
+  });
   const [priorityFilter, setPriorityFilter] = useState<string>("");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [systemFilter, setSystemFilter] = useState<string>("");
 
   // Sort & Pagination Controls
-  const [sortBy, setSortBy] = useState<string>("priority");
-  const [sortDirection, setSortDirection] = useState<string>("desc");
+  const [sortBy, setSortBy] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("sortBy") || "priority";
+  });
+  const [sortDirection, setSortDirection] = useState<string>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("sortDirection") || "desc";
+  });
   const [page, setPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(10);
+
+  // Sync URL query parameters for drill-down filters from Requester Dashboard
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const statusParam = params.get("status");
+    const filterParam = params.get("filter");
+    const sortByParam = params.get("sortBy");
+    const sortDirParam = params.get("sortDirection");
+
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    } else if (filterParam === "open") {
+      setStatusFilter("open");
+    } else if (filterParam === "resolved") {
+      setStatusFilter("Resolved");
+    }
+
+    if (sortByParam) {
+      setSortBy(sortByParam);
+    }
+    if (sortDirParam) {
+      setSortDirection(sortDirParam);
+    }
+  }, [location.search]);
 
   // Load Categories & Related Systems on mount for filters
   useEffect(() => {
@@ -166,6 +205,19 @@ export const MyTicketsPage: React.FC = () => {
     }
   };
 
+  const handleSortDate = () => {
+    setPage(1);
+    if (sortBy !== "updatedAt") {
+      setSortBy("updatedAt");
+      setSortDirection("desc");
+    } else if (sortDirection === "desc") {
+      setSortDirection("asc");
+    } else {
+      setSortBy("");
+      setSortDirection("desc");
+    }
+  };
+
   const handleClearFilters = () => {
     setSearch("");
     setDebouncedSearch("");
@@ -205,28 +257,28 @@ export const MyTicketsPage: React.FC = () => {
   const renderStatusBadge = (status: string) => {
     const lower = status.toLowerCase();
     if (lower === "new") {
-      return <span className="tt-badge tt-badge-new">New</span>;
+      return <span className="tt-badge tt-badge-new" style={{ whiteSpace: "nowrap" }}>New</span>;
     }
     if (lower === "open") {
-      return <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED" }}>Open</span>;
+      return <span className="tt-badge" style={{ backgroundColor: "#EBF8FF", color: "#2B6CB0", border: "1px solid #63B3ED", whiteSpace: "nowrap" }}>Open</span>;
     }
     if (lower === "in progress") {
-      return <span className="tt-badge tt-badge-medium">In Progress</span>;
+      return <span className="tt-badge tt-badge-medium" style={{ whiteSpace: "nowrap" }}>In Progress</span>;
     }
     if (lower === "waiting for requester") {
-      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E" }}>Waiting for Requester</span>;
+      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", whiteSpace: "nowrap" }}>Waiting</span>;
     }
     if (lower === "pending verification") {
-      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>Pending Verification</span>;
+      return <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600, whiteSpace: "nowrap" }}>Pending</span>;
     }
     if (lower === "reopened") {
-      return <span className="tt-badge" style={{ backgroundColor: "#FEE2E2", color: "#991B1B", border: "1px solid #F87171" }}>Reopened</span>;
+      return <span className="tt-badge" style={{ backgroundColor: "#FEE2E2", color: "#991B1B", border: "1px solid #F87171", whiteSpace: "nowrap" }}>Reopened</span>;
     }
     if (lower === "resolved") {
       return (
         <span
           className="tt-badge"
-          style={{ backgroundColor: "#E6FFFA", color: "#234E52", border: "1px solid #319795" }}
+          style={{ backgroundColor: "#E6FFFA", color: "#234E52", border: "1px solid #319795", whiteSpace: "nowrap" }}
         >
           Resolved
         </span>
@@ -236,16 +288,16 @@ export const MyTicketsPage: React.FC = () => {
       return (
         <span
           className="tt-badge"
-          style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0" }}
+          style={{ backgroundColor: "#EDF2F7", color: "#4A5568", border: "1px solid #CBD5E0", whiteSpace: "nowrap" }}
         >
           Closed
         </span>
       );
     }
     if (lower === "cancelled") {
-      return <span className="tt-badge" style={{ backgroundColor: "#E2E8F0", color: "#718096", border: "1px solid #A0AEC0" }}>Cancelled</span>;
+      return <span className="tt-badge" style={{ backgroundColor: "#E2E8F0", color: "#718096", border: "1px solid #A0AEC0", whiteSpace: "nowrap" }}>Cancelled</span>;
     }
-    return <span className="tt-badge">{status}</span>;
+    return <span className="tt-badge" style={{ whiteSpace: "nowrap" }}>{status}</span>;
   };
 
   const formatDate = (dateStr: string): string => {
@@ -266,7 +318,7 @@ export const MyTicketsPage: React.FC = () => {
             View and manage your submitted IT support tickets for <strong>{selectedRequester?.name}</strong>.
           </p>
         </div>
-        <Link to="/tickets/new" className="tt-btn tt-btn-primary">
+        <Link to="/requester/tickets/new" className="tt-btn tt-btn-primary" style={{ textDecoration: "none" }}>
           + Create Ticket
         </Link>
       </div>
@@ -293,14 +345,20 @@ export const MyTicketsPage: React.FC = () => {
               setStatusFilter(e.target.value);
               setPage(1);
             }}
-            style={{ width: "150px" }}
+            style={{ width: "170px" }}
             aria-label="Filter by Status"
           >
             <option value="">All Statuses</option>
+            <option value="open">All Open Tickets</option>
             <option value="New">New</option>
+            <option value="Open">Open</option>
             <option value="In Progress">In Progress</option>
+            <option value="Waiting for Requester">Waiting for Requester</option>
+            <option value="Pending Verification">Pending Verification</option>
             <option value="Resolved">Resolved</option>
             <option value="Closed">Closed</option>
+            <option value="Reopened">Reopened</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
 
           {/* Priority Filter */}
@@ -424,10 +482,10 @@ export const MyTicketsPage: React.FC = () => {
               <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                 <thead>
                   <tr style={{ borderBottom: "2px solid var(--color-border)", color: "var(--color-text-muted)", fontSize: "13px" }}>
-                    <th style={{ padding: "12px 8px" }}>Ticket #</th>
+                    <th style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>Ticket #</th>
                     <th style={{ padding: "12px 8px" }}>Summary</th>
-                    <th style={{ padding: "12px 8px" }}>Category</th>
-                    <th style={{ padding: "12px 8px" }}>Related System</th>
+                    <th style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>Category</th>
+                    <th style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>Related System</th>
                     {/* Priority Header (Clickable Sort) */}
                     <th
                       onClick={handleSortPriority}
@@ -437,6 +495,7 @@ export const MyTicketsPage: React.FC = () => {
                         userSelect: "none",
                         color: sortBy === "priority" ? "var(--color-primary-green)" : "inherit",
                         fontWeight: sortBy === "priority" ? 700 : "inherit",
+                        whiteSpace: "nowrap",
                       }}
                       title="Click to sort by Priority"
                     >
@@ -451,19 +510,34 @@ export const MyTicketsPage: React.FC = () => {
                         userSelect: "none",
                         color: sortBy === "status" ? "var(--color-primary-green)" : "inherit",
                         fontWeight: sortBy === "status" ? 700 : "inherit",
+                        whiteSpace: "nowrap",
                       }}
                       title="Click to sort by Status"
                     >
                       Status {sortBy === "status" ? (sortDirection === "asc" ? "↑" : "↓") : ""}
                     </th>
-                    <th style={{ padding: "12px 8px" }}>Created</th>
+                    {/* Last Updated Header (Clickable Sort) */}
+                    <th
+                      onClick={handleSortDate}
+                      style={{
+                        padding: "12px 8px",
+                        cursor: "pointer",
+                        userSelect: "none",
+                        color: ["date", "createdat", "updatedat"].includes(sortBy.toLowerCase()) ? "var(--color-primary-green)" : "inherit",
+                        fontWeight: ["date", "createdat", "updatedat"].includes(sortBy.toLowerCase()) ? 700 : "inherit",
+                        whiteSpace: "nowrap",
+                      }}
+                      title="Click to sort by Last Updated"
+                    >
+                      Last Updated {["date", "createdat", "updatedat"].includes(sortBy.toLowerCase()) ? (sortDirection === "desc" ? "↓" : "↑") : ""}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {tickets.map((t) => (
                     <tr
                       key={t.id}
-                      onClick={() => navigate(`/tickets/${t.id}`)}
+                      onClick={() => navigate(`/requester/tickets/${t.id}`)}
                       style={{
                         borderBottom: "1px solid var(--color-border)",
                         cursor: "pointer",
@@ -472,7 +546,7 @@ export const MyTicketsPage: React.FC = () => {
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "var(--color-pale-green)")}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
                     >
-                      <td style={{ padding: "12px 8px", fontWeight: 600, color: "var(--color-primary-green)" }}>
+                      <td style={{ padding: "12px 8px", fontWeight: 600, color: "var(--color-primary-green)", whiteSpace: "nowrap" }}>
                         {t.ticketNumber}
                       </td>
                       <td style={{ padding: "12px 8px", fontWeight: 500 }}>{t.summary}</td>
@@ -482,10 +556,10 @@ export const MyTicketsPage: React.FC = () => {
                       <td style={{ padding: "12px 8px", color: "var(--color-text-muted)", fontSize: "13px" }}>
                         {t.relatedSystem.name}
                       </td>
-                      <td style={{ padding: "12px 8px" }}>{renderPriorityBadge(t.requestedPriority)}</td>
-                      <td style={{ padding: "12px 8px" }}>{renderStatusBadge(t.currentStatus)}</td>
-                      <td style={{ padding: "12px 8px", color: "var(--color-text-muted)", fontSize: "13px" }}>
-                        {formatDate(t.createdAt)}
+                      <td style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>{renderPriorityBadge(t.requestedPriority)}</td>
+                      <td style={{ padding: "12px 8px", whiteSpace: "nowrap" }}>{renderStatusBadge(t.currentStatus)}</td>
+                      <td style={{ padding: "12px 8px", color: "var(--color-text-muted)", fontSize: "13px", whiteSpace: "nowrap" }}>
+                        {formatDate(t.updatedAt || t.createdAt)}
                       </td>
                     </tr>
                   ))}

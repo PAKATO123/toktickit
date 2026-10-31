@@ -84,3 +84,24 @@ This document highlights the key design decisions, baseline choices, and operati
   - **Renamed Terminology**: Renamed "Public Comment" to "Comment".
   - **Persistent Top Input Form**: The `Add a Comment` form stays at the top above comments across page changes.
   - **Pagination**: Paginated at max 10 comments per page.
+
+### 1.7 Actions Taken Follow-Up States & Queue UI Enhancements
+- **3-State Follow-Up Tracking**:
+  - `Follow-Up Required`: Rendered with yellow background `#FEFCBF`, border `#D69E2E`, and brown text `#744210` (matches header badge below ticket title).
+  - `Followed up`: Rendered with green background `#E6FFFA`, border `#319795`, and green text `#234E52` when `followUpRequired = false` and a `followUpNote` exists.
+  - `No Follow-Up Needed`: Rendered with gray badge when `followUpRequired = false` and no `followUpNote` exists.
+- **Mark Done Action Transition**:
+  - Clicking "Mark done" updates `followUpRequired` to `false` while setting or preserving `followUpNote: "Followed up"`, ensuring immediate visual transition to the green `Followed up` state.
+  - "Mark done" button design matches the "Edit" button (clean text link, no frame, green text with hover underline).
+- **Follow-Up Sorting Order**:
+  - When *"Put 'Follow-Up Required' first"* is toggled on:
+    $$\text{Oldest Follow-Up Required} \rightarrow \text{Newest Follow-Up Required} \rightarrow \text{Newest Non-Follow-Up} \rightarrow \text{Oldest Non-Follow-Up}$$
+- **Staff Queue Page Refinements** (`/staff/queue`):
+  - **Filter Bar Grid**: 2-row layout (Row 1: Search, Status, IT Priority, Assignment; Row 2: Category, Related System, `Follow-up Required`, Clear All Filters — 4 controls per line).
+  - **Muted Table Headers**: Styled with `color: var(--color-text-muted)`, `fontSize: 13px`, `fontWeight: 600`. Header for follow-up column uses `Follow-up<br />Required`.
+  - **Single Date Column**: Removed `Submitted` date column; `Last Updated` (`updatedAt`) remains as sole date column.
+  - **Follow-up Cell**: Formatted as simple `Yes` (gold) or `No` (muted text).
+  - **Ticket Link & Hover**: Ticket numbers are styled in green (`var(--color-primary-green)`), and table rows highlight with pale green (`var(--color-pale-green)`) on hover, matching Requester list styling.
+- **Compact Status Badge Display**:
+  - Status badges in tables display `Waiting` (for `Waiting for Requester`) and `Pending` (for `Pending Verification`).
+  - Status pills across Staff & Admin Dashboards render bordered pill frames for all statuses including `Cancelled`, `Reopened`, and `Pending`.

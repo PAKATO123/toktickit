@@ -449,3 +449,45 @@ a:hover {
   to { transform: translateY(0); opacity: 1; }
 }
 
+.tt-btn-pill-primary {
+  display: inline-block;
+  text-align: center;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background-color: var(--color-primary-green);
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none !important;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.tt-btn-pill-primary:hover {
+  background-color: #00522E;
+  color: #ffffff !important;
+  text-decoration: none !important;
+}
+
+.tt-btn-pill-secondary {
+  display: inline-block;
+  text-align: center;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  background-color: var(--color-pale-green);
+  color: var(--color-primary-green) !important;
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none !important;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.tt-btn-pill-secondary:hover {
+  background-color: #D2EBD9;
+  color: var(--color-primary-green) !important;
+  text-decoration: none !important;
+}
+

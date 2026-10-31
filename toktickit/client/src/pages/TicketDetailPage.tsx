@@ -58,6 +58,7 @@ export const TicketDetailPage: React.FC = () => {
   // Staff Management States (F-08)
   const [staffUsers, setStaffUsers] = useState<UserOption[]>([]);
   const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [hasFollowUpRequired, setHasFollowUpRequired] = useState<boolean>(false);
 
   // Activity Feed States (F-08 & Lab 4 Sprint)
   const [activeTab, setActiveTab] = useState<"comments" | "notes">("comments");
@@ -82,12 +83,18 @@ export const TicketDetailPage: React.FC = () => {
   const currentRequesterId = selectedRequester?.id || user?.id;
 
   // Track initial requester ID to detect requester switches (BR-07)
-  const initialRequesterIdRef = useRef<number | null>(currentRequesterId || null);
+  const initialRequesterIdRef = useRef<number | null>(null);
 
-  // BR-07: Redirect to /tickets if requester context changes while on detail page
+  useEffect(() => {
+    if (currentRequesterId && initialRequesterIdRef.current === null) {
+      initialRequesterIdRef.current = currentRequesterId;
+    }
+  }, [currentRequesterId]);
+
+  // BR-07: Redirect to /requester/tickets if requester context changes while on detail page
   useEffect(() => {
     if (!isStaff && selectedRequester && initialRequesterIdRef.current !== null && selectedRequester.id !== initialRequesterIdRef.current) {
-      navigate("/tickets");
+      navigate("/requester/tickets");
     }
   }, [selectedRequester, navigate, isStaff]);
 
@@ -646,6 +653,11 @@ export const TicketDetailPage: React.FC = () => {
                 {renderStatusBadge(ticket.currentStatus, ticket.isRequesterResolved)}
                 {renderPriorityBadge(ticket.requestedPriority, "Req Priority")}
                 {ticket.itPriority && renderPriorityBadge(ticket.itPriority, "IT Priority")}
+                {hasFollowUpRequired && (
+                  <span className="tt-badge" style={{ backgroundColor: "#FEFCBF", color: "#744210", border: "1px solid #D69E2E", fontWeight: 600 }}>
+                    Follow-Up Required
+                  </span>
+                )}
                 {ticket.assignedTo && (
                   <span className="tt-badge" style={{ backgroundColor: "#EDF2F7", color: "#2D3748", border: "1px solid #CBD5E0" }}>
                     👤 {ticket.assignedTo.name}
@@ -913,6 +925,7 @@ export const TicketDetailPage: React.FC = () => {
                 ticketId={ticket.id}
                 currentUserRole={user?.role || "REQUESTER"}
                 ticketStatus={ticket.currentStatus}
+                onActionsChange={(actions) => setHasFollowUpRequired(actions.some((a) => a.followUpRequired))}
               />
 
               {/* Activity Feed & Ticket Communication (F-08 & Lab 4 Sprint) */}
