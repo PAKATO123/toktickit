@@ -19,10 +19,12 @@ export const RequesterSelectorPage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      if (user.role === "IT_STAFF" || user.role === "ADMINISTRATOR") {
-        navigate("/staff/queue", { replace: true });
+      if (user.role === "ADMINISTRATOR") {
+        navigate("/admin/dashboard", { replace: true });
+      } else if (user.role === "IT_STAFF") {
+        navigate("/staff/dashboard", { replace: true });
       } else {
-        navigate("/tickets", { replace: true });
+        navigate("/requester/dashboard", { replace: true });
       }
       return;
     }

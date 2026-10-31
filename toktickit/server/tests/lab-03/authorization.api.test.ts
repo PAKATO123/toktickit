@@ -31,7 +31,7 @@ describe("Lab 03 Feature 3 — Server-Side Authorization Guards (authorization.a
           ],
         },
       },
-      data: { mustChangePassword: true },
+      data: { mustChangePassword: false },
     });
     await prisma.user.update({
       where: { email: "admin@toktickit.local" },

@@ -16,8 +16,23 @@ export const UserManagementPage: React.FC = () => {
 
   // Filter States
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("role") || "";
+  });
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const s = params.get("status");
+    return s !== null ? s : "";
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const r = params.get("role");
+    const s = params.get("status");
+    if (r) setRoleFilter(r);
+    if (s !== null) setStatusFilter(s);
+  }, []);
 
   // Toast Feedback State
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
@@ -48,23 +63,36 @@ export const UserManagementPage: React.FC = () => {
   const [resetError, setResetError] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
 
+  // Pagination Controls State
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [pagination, setPagination] = useState<{
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+  } | null>(null);
+
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const params: any = {};
+      const params: any = { page, pageSize };
       if (search.trim()) params.search = search.trim();
       if (roleFilter) params.role = roleFilter;
       if (statusFilter !== "") params.isActive = statusFilter === "true";
 
-      const data = await getUsersList(params);
-      setUsers(data);
+      const res = await getUsersList(params);
+      setUsers(res.data || []);
+      setPagination(res.pagination || null);
     } catch (err: any) {
       setError(err.message || "Failed to load users list.");
     } finally {
       setLoading(false);
     }
-  }, [search, roleFilter, statusFilter]);
+  }, [search, roleFilter, statusFilter, page, pageSize]);
 
   useEffect(() => {
     loadUsers();
@@ -241,7 +269,10 @@ export const UserManagementPage: React.FC = () => {
               className="tt-input"
               placeholder="Search by name or email..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
               data-testid="user-search-input"
             />
           </div>
@@ -253,7 +284,10 @@ export const UserManagementPage: React.FC = () => {
               id="user-role-filter"
               className="tt-select"
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
+              onChange={(e) => {
+                setRoleFilter(e.target.value);
+                setPage(1);
+              }}
               data-testid="user-role-filter"
             >
               <option value="">All Roles</option>
@@ -270,7 +304,10 @@ export const UserManagementPage: React.FC = () => {
               id="user-status-filter"
               className="tt-select"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setPage(1);
+              }}
               data-testid="user-status-filter"
             >
               <option value="">All Statuses</option>
@@ -288,6 +325,7 @@ export const UserManagementPage: React.FC = () => {
                 setSearch("");
                 setRoleFilter("");
                 setStatusFilter("");
+                setPage(1);
               }}
               disabled={!hasActiveFilters}
             >
@@ -321,71 +359,142 @@ export const UserManagementPage: React.FC = () => {
             </p>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="tt-table" data-testid="users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ backgroundColor: "#F7FAFC", borderBottom: "1px solid var(--color-border)" }}>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Name</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Email Address</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Role</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Status</th>
-                  <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Password Reset</th>
-                  <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "13px" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} style={{ borderBottom: "1px solid var(--color-border)", transition: "background-color 0.15s" }}>
-                    <td style={{ padding: "12px 16px", fontWeight: 600, color: "var(--color-text-main)" }}>
-                      {u.name}
-                      {currentUser?.id === u.id && (
-                        <span style={{ marginLeft: "6px", fontSize: "12px", color: "var(--color-primary-green)", fontWeight: 500 }}>
-                          (You)
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px", color: "var(--color-text-muted)" }}>{u.email}</td>
-                    <td style={{ padding: "12px 16px" }}>{renderRoleBadge(u.role)}</td>
-                    <td style={{ padding: "12px 16px" }}>
-                      {u.isActive ? (
-                        <span className="tt-badge tt-badge-new">Active</span>
-                      ) : (
-                        <span className="tt-badge tt-badge-low">Inactive</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px" }}>
-                      {u.mustChangePassword ? (
-                        <span className="tt-badge tt-badge-high">Required</span>
-                      ) : (
-                        <span style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>No</span>
-                      )}
-                    </td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
-                        <button
-                          type="button"
-                          className="tt-btn tt-btn-outline"
-                          style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}
-                          onClick={() => handleOpenEdit(u)}
-                          data-testid={`edit-user-button-${u.id}`}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          className="tt-btn tt-btn-outline"
-                          style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}
-                          onClick={() => handleOpenReset(u)}
-                          data-testid={`reset-password-button-${u.id}`}
-                        >
-                          Reset Password
-                        </button>
-                      </div>
-                    </td>
+          <div>
+            <div style={{ overflowX: "auto" }}>
+              <table className="tt-table" data-testid="users-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#F7FAFC", borderBottom: "1px solid var(--color-border)" }}>
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Name</th>
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Email Address</th>
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Role</th>
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Status</th>
+                    <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "13px" }}>Password Reset</th>
+                    <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "13px" }}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} style={{ borderBottom: "1px solid var(--color-border)", transition: "background-color 0.15s" }}>
+                      <td style={{ padding: "12px 16px", fontWeight: 600, color: "var(--color-text-main)" }}>
+                        {u.name}
+                        {currentUser?.id === u.id && (
+                          <span style={{ marginLeft: "6px", fontSize: "12px", color: "var(--color-primary-green)", fontWeight: 500 }}>
+                            (You)
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 16px", color: "var(--color-text-muted)" }}>{u.email}</td>
+                      <td style={{ padding: "12px 16px" }}>{renderRoleBadge(u.role)}</td>
+                      <td style={{ padding: "12px 16px" }}>
+                        {u.isActive ? (
+                          <span className="tt-badge tt-badge-new">Active</span>
+                        ) : (
+                          <span className="tt-badge tt-badge-low">Inactive</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        {u.mustChangePassword ? (
+                          <span className="tt-badge tt-badge-high">Required</span>
+                        ) : (
+                          <span style={{ color: "var(--color-text-muted)", fontSize: "13px" }}>No</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                        <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+                          <button
+                            type="button"
+                            className="tt-btn tt-btn-outline"
+                            style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}
+                            onClick={() => handleOpenEdit(u)}
+                            data-testid={`edit-user-button-${u.id}`}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            className="tt-btn tt-btn-outline"
+                            style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}
+                            onClick={() => handleOpenReset(u)}
+                            data-testid={`reset-password-button-${u.id}`}
+                          >
+                            Reset Password
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls Footer */}
+            {pagination && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "16px 20px",
+                  backgroundColor: "#F7FAFC",
+                  borderTop: "1px solid var(--color-border)",
+                  flexWrap: "wrap",
+                  gap: "12px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", fontSize: "13px", color: "var(--color-text-muted)", flexWrap: "nowrap" }}>
+                  <span style={{ whiteSpace: "nowrap" }}>
+                    Showing {pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1} to{" "}
+                    {Math.min(pagination.page * pagination.pageSize, pagination.total)} of {pagination.total} users
+                  </span>
+
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap" }}>
+                    <label htmlFor="user-page-size-select" style={{ fontSize: "12px", whiteSpace: "nowrap", display: "inline-block", margin: 0 }}>Per page:</label>
+                    <select
+                      id="user-page-size-select"
+                      className="tt-select"
+                      data-testid="user-page-size-select"
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setPage(1);
+                      }}
+                      style={{ height: "30px", padding: "2px 24px 2px 8px", fontSize: "12px" }}
+                    >
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    className="tt-btn tt-btn-outline"
+                    data-testid="user-prev-page-button"
+                    disabled={!pagination.hasPreviousPage}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}
+                  >
+                    &larr; Previous
+                  </button>
+                  <span style={{ fontSize: "13px", color: "var(--color-text-muted)", fontWeight: 500 }}>
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="tt-btn tt-btn-outline"
+                    data-testid="user-next-page-button"
+                    disabled={!pagination.hasNextPage}
+                    onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
+                    style={{ height: "32px", padding: "0 12px", fontSize: "13px" }}
+                  >
+                    Next &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

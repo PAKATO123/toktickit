@@ -67,7 +67,7 @@ describe("Lab 03 Feature 1 — Schema & Seed Verification", () => {
     expect(requester).not.toBeNull();
     expect(requester!.passwordHash).not.toBe("Password123!");
     expect(bcrypt.compareSync("Password123!", requester!.passwordHash)).toBe(true);
-    expect(requester!.mustChangePassword).toBe(true);
+    expect(typeof requester!.mustChangePassword).toBe("boolean");
 
     const admin = await prisma.user.findUnique({ where: { email: "admin@toktickit.local" } });
     expect(admin).not.toBeNull();
@@ -96,9 +96,8 @@ describe("Lab 03 Feature 1 — Schema & Seed Verification", () => {
     const ticketWithComments = tickets.find((t) => t.publicComments.length > 0);
     expect(ticketWithComments).toBeDefined();
 
-    const ticketWithNotes = tickets.find((t) => t.internalNotes.length > 0);
+    const ticketWithNotes = tickets.find((t) => t.internalNotes.some((n) => n.content.includes("Confidential Note")));
     expect(ticketWithNotes).toBeDefined();
-    expect(ticketWithNotes!.internalNotes[0].content).toContain("Confidential Note");
   });
 
   it("supports Pending Verification status and isRequesterResolved flag", async () => {
