@@ -144,4 +144,67 @@ describe("Lab 04 — Actions Taken API Integration Tests", () => {
     expect(updateRes.status).toBe(200);
     expect(updateRes.body.actionTaken.description).toBe("Updated diagnostic sweep details.");
   });
+
+  it("rejects stale update with 409 Conflict when expectedUpdatedAt does not match existing record", async () => {
+    const agentStaff = request.agent(app);
+    await agentStaff
+      .post("/api/auth/login")
+      .send({ email: "staff1@toktickit.local", password: "Password123!" });
+
+    const createRes = await agentStaff
+      .post("/api/tickets/1/actions-taken")
+      .send({
+        description: "Checking system temperature.",
+        result: "Normal operating range.",
+        followUpRequired: false,
+      });
+
+    const action = createRes.body.actionTaken;
+
+    const staleRes = await agentStaff
+      .put(`/api/tickets/1/actions-taken/${action.id}`)
+      .send({
+        description: "Concurrent attempt to update action.",
+        result: "Overwritten result.",
+        expectedUpdatedAt: new Date(Date.now() - 7200000).toISOString(),
+      });
+
+    expect(staleRes.status).toBe(409);
+    expect(staleRes.body.error.code).toBe("STALE_UPDATE_CONFLICT");
+  });
+
+  it("correctly handles isFollowedUp flag and clears note when unchecking followUpRequired without mark-done", async () => {
+    const agentStaff = request.agent(app);
+    await agentStaff
+      .post("/api/auth/login")
+      .send({ email: "staff1@toktickit.local", password: "Password123!" });
+
+    // Create with follow-up required
+    const createRes = await agentStaff
+      .post("/api/tickets/1/actions-taken")
+      .send({
+        description: "Checked disk arrays.",
+        result: "RAID rebuild initiated.",
+        followUpRequired: true,
+        followUpNote: "Verify RAID consistency tomorrow.",
+      });
+
+    const actionId = createRes.body.actionTaken.id;
+    expect(createRes.body.actionTaken.isFollowedUp).toBe(false);
+
+    // Edit and uncheck followUpRequired (normal edit, NOT mark-done)
+    const updateRes = await agentStaff
+      .put(`/api/tickets/1/actions-taken/${actionId}`)
+      .send({
+        description: "Checked disk arrays.",
+        result: "RAID rebuild completed immediately.",
+        followUpRequired: false,
+        isFollowedUp: false,
+      });
+
+    expect(updateRes.status).toBe(200);
+    expect(updateRes.body.actionTaken.followUpRequired).toBe(false);
+    expect(updateRes.body.actionTaken.isFollowedUp).toBe(false);
+    expect(updateRes.body.actionTaken.followUpNote).toBeNull();
+  });
 });

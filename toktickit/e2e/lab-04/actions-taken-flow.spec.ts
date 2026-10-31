@@ -14,19 +14,18 @@ test.describe('Lab 04 E2E — Actions Taken Flow', () => {
     }
 
     const emailInput = page.locator("#email-input");
-    if (await emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await emailInput.fill(email);
-      await page.locator("#password-input").fill(defaultPassword);
+    await emailInput.waitFor({ state: "visible", timeout: 10000 });
+    await emailInput.fill(email);
+    await page.locator("#password-input").fill(defaultPassword);
+    await page.getByRole("button", { name: "Sign In" }).click();
+
+    const isError = await page.locator("[data-testid='error-alert'], .tt-alert-error").isVisible({ timeout: 1500 }).catch(() => false);
+    if (isError) {
+      await page.locator("#password-input").fill("NewPassword123!");
       await page.getByRole("button", { name: "Sign In" }).click();
-
-      const isError = await page.locator("[data-testid='error-alert'], .tt-alert-error").isVisible({ timeout: 1500 }).catch(() => false);
-      if (isError) {
-        await page.locator("#password-input").fill("NewPassword123!");
-        await page.getByRole("button", { name: "Sign In" }).click();
-      }
-
-      await page.waitForURL(/\/(requester\/dashboard|staff\/dashboard|admin\/dashboard|staff\/queue)/, { timeout: 10000 });
     }
+
+    await page.waitForURL(/\/(requester\/dashboard|staff\/dashboard|admin\/dashboard|staff\/queue)/, { timeout: 10000 });
   };
 
   test('IT Staff creates Action Taken with follow-up required, confirms modal mark done, and verifies status update', async ({ page }) => {

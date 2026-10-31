@@ -33,8 +33,9 @@ For testing and grading, use the following seeded accounts:
 
 | Role | Email | Initial Password | Notes / Permissions |
 |---|---|---|---|
-| **Requester** | `requester1@toktickit.local` | `Password123!` | Triggers mandatory password change on 1st login |
-| **IT Staff** | `staff1@toktickit.local` | `Password123!` | Access to Staff Queue, Claim, Assignee & IT Controls |
+| **Requester (Standard)** | `requester1@toktickit.local` | `Password123!` | Active requester with pre-seeded tickets (Direct dashboard access) |
+| **Requester (1st Login Change)** | `requester4@toktickit.local` | `Password123!` | Demonstrates Lab 3 mandatory first-login password change (`mustChangePassword: true`) |
+| **IT Staff** | `staff1@toktickit.local` | `Password123!` | Access to Staff Queue, Claim, Assignee, Actions Taken & IT Controls |
 | **Administrator** | `admin@toktickit.local` | `AdminPassword123!` | Full access including User Management (`/admin/users`) |
 
 ---

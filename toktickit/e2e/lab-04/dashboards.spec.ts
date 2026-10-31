@@ -14,19 +14,18 @@ test.describe('Lab 04 E2E — Role Dashboards', () => {
     }
 
     const emailInput = page.locator("#email-input");
-    if (await emailInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await emailInput.fill(email);
-      await page.locator("#password-input").fill(defaultPassword);
+    await emailInput.waitFor({ state: "visible", timeout: 10000 });
+    await emailInput.fill(email);
+    await page.locator("#password-input").fill(defaultPassword);
+    await page.getByRole("button", { name: "Sign In" }).click();
+
+    const isError = await page.locator("[data-testid='error-alert'], .tt-alert-error").isVisible({ timeout: 1500 }).catch(() => false);
+    if (isError) {
+      await page.locator("#password-input").fill("NewPassword123!");
       await page.getByRole("button", { name: "Sign In" }).click();
-
-      const isError = await page.locator("[data-testid='error-alert'], .tt-alert-error").isVisible({ timeout: 1500 }).catch(() => false);
-      if (isError) {
-        await page.locator("#password-input").fill("NewPassword123!");
-        await page.getByRole("button", { name: "Sign In" }).click();
-      }
-
-      await page.waitForURL(/\/(requester\/dashboard|staff\/dashboard|admin\/dashboard|staff\/queue)/, { timeout: 10000 });
     }
+
+    await page.waitForURL(/\/(requester\/dashboard|staff\/dashboard|admin\/dashboard|staff\/queue)/, { timeout: 10000 });
   };
 
   test('Requester views dashboard, checks ticket metrics, and navigates via quick action links', async ({ page }) => {
@@ -65,10 +64,9 @@ test.describe('Lab 04 E2E — Role Dashboards', () => {
 
     // Click Unassigned metric card to test drill-down
     const unassignedCard = page.locator('div').filter({ hasText: /Unassigned Tickets/i }).last();
-    if (await unassignedCard.isVisible().catch(() => false)) {
-      await unassignedCard.click();
-      await expect(page).toHaveURL(/\/staff\/queue/);
-    }
+    await expect(unassignedCard).toBeVisible();
+    await unassignedCard.click();
+    await expect(page).toHaveURL(/\/staff\/queue/);
   });
 
   test('Administrator views dashboard with staff operational metrics and user account statistics', async ({ page }) => {

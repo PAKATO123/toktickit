@@ -25,8 +25,8 @@ const USERS = [
   { email: "requester1@toktickit.local", name: "Alice Smith", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
   { email: "requester2@toktickit.local", name: "Bob Johnson", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
   { email: "requester3@toktickit.local", name: "Charlie Brown", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "requester4@toktickit.local", name: "Diana Prince", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
-  { email: "requester5@toktickit.local", name: "Eve Inactive", role: "REQUESTER" as const, isActive: false, mustChangePassword: false, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "requester4@toktickit.local", name: "Diana Prince", role: "REQUESTER" as const, isActive: true, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
+  { email: "requester5@toktickit.local", name: "Eve Inactive", role: "REQUESTER" as const, isActive: false, mustChangePassword: true, passwordHash: DEFAULT_PASSWORD_HASH },
 
 
   // IT Staff (3 active, 1 inactive)
@@ -203,6 +203,7 @@ async function main() {
       // 7. Seed Actions Taken for assigned tickets (covering 3 follow-up states)
       const followUpState = i % 3; // 0: Follow-Up Required, 1: Followed Up, 2: No Follow-Up Needed
       const isReq = followUpState === 0;
+      const isFollowedUp = followUpState === 1;
       const note = followUpState === 0
         ? "Follow up with requester in 24 hours to confirm system stability under workload."
         : followUpState === 1
@@ -217,6 +218,7 @@ async function main() {
             description: `Initial diagnostic inspection performed for ${tpl.summary}.`,
             result: "Identified core root cause and performed driver reconfiguration.",
             followUpRequired: isReq,
+            isFollowedUp: isFollowedUp,
             followUpNote: note,
             attachmentNotes: i % 2 === 0 ? "Screenshot report saved in attachments tab (diag_result.png)." : null,
             actionDate: new Date(createdAt.getTime() + 5400000),
