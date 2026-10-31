@@ -41,4 +41,6 @@ docs/lab-03/submission_evidence_guide.md
 docs/lab-02BackUp.zip
 docs/lab-01/note
 test-results/
+*.timestamp-*.mjs
+
 

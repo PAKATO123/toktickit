@@ -121,7 +121,12 @@ describe("Lab 02 Feature 4 — Development Requester Selector", () => {
   });
 
   it("displays safe error state when API fails", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("API Failure"));
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url: any) => {
+      if (String(url).includes("/api/requesters")) {
+        throw new Error("API Failure");
+      }
+      return { ok: true, json: async () => ({ user: null }) } as Response;
+    });
 
     render(
       <RequesterProvider>
@@ -136,10 +141,12 @@ describe("Lab 02 Feature 4 — Development Requester Selector", () => {
   });
 
   it("displays empty state and disables Continue button when API returns 0 active requesters", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ data: [] }),
-    } as Response);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url: any) => {
+      if (String(url).includes("/api/requesters")) {
+        return { ok: true, json: async () => ({ data: [] }) } as Response;
+      }
+      return { ok: true, json: async () => ({ user: null }) } as Response;
+    });
 
     render(
       <RequesterProvider>
