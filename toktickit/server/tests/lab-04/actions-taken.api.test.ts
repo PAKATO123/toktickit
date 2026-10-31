@@ -36,7 +36,7 @@ describe("Lab 04 — Actions Taken API Integration Tests", () => {
           ],
         },
       },
-      data: { passwordHash: defaultHash, mustChangePassword: true },
+      data: { passwordHash: defaultHash, mustChangePassword: false },
     });
     await prisma.user.update({
       where: { email: "admin@toktickit.local" },

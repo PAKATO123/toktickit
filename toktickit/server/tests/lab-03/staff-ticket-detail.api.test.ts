@@ -36,7 +36,7 @@ describe("Lab 03 — IT Staff Ticket Operations API (staff-ticket-detail.api.tes
           ],
         },
       },
-      data: { passwordHash: defaultHash, mustChangePassword: true },
+      data: { passwordHash: defaultHash, mustChangePassword: false },
     });
     await prisma.user.update({
       where: { email: "admin@toktickit.local" },

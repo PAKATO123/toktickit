@@ -36,7 +36,7 @@ describe("Lab 04 — Ticket Workflow API Integration Tests", () => {
           ],
         },
       },
-      data: { passwordHash: defaultHash, mustChangePassword: true },
+      data: { passwordHash: defaultHash, mustChangePassword: false },
     });
     await prisma.user.update({
       where: { email: "admin@toktickit.local" },

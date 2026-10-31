@@ -34,7 +34,7 @@ describe("Lab 03 Feature 4 — IT Staff Ticket Queue & Workflow Backend (staff-q
           ],
         },
       },
-      data: { mustChangePassword: true },
+      data: { mustChangePassword: false },
     });
     await prisma.user.update({
       where: { email: "admin@toktickit.local" },
